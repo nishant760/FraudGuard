@@ -1,0 +1,30 @@
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+backend/fraudguard.db
+backend/transactions.db
+*.db
+*.sqlite3
+
+# Node / Frontend
+node_modules/
+dist/
+.DS_Store
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Machine Learning (Keep models, ignore huge raw data if any)
+# We want to KEEP the ml/models/*.joblib files, so we don't ignore them.
+# But we might want to ignore large datasets if they are inside data/raw/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
