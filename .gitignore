@@ -21,10 +21,5 @@ dist/
 *.swo
 .DS_Store
 
-# Machine Learning (Keep models, ignore huge raw data if any)
-# We want to KEEP the ml/models/*.joblib files, so we don't ignore them.
-# But we might want to ignore large datasets if they are inside data/raw/
-data/raw/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+# Project Documents
+synopsis/
