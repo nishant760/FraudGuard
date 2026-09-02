@@ -1,103 +1,129 @@
-import { useEffect, useRef } from 'react';
-import type { RiskLevel } from '../../types';
+import { type ReactNode, useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import type { RiskLevel } from "@/types";
+import "./GaugeChart.css";
 
-interface Props {
-  value: number;    // 0–100
-  riskLevel?: RiskLevel;
-  label?: string;
+interface GaugeChartProps {
+  showValue?: boolean;
   size?: number;
+  gap?: number;
+  progress?: number;
+  trackClassName?: string;
+  progressClassName?: string;
+  circleWidth?: number;
+  progressWidth?: number;
+  rounded?: boolean;
+  className?: string;
+  children?: ReactNode;
+  // Compatibility with existing ResultPanel usage
+  value?: number;
+  riskLevel?: RiskLevel | string;
+  label?: string;
 }
 
-const RISK_COLORS: Record<RiskLevel, string> = {
-  LOW: '#10b981',
-  MEDIUM: '#f59e0b',
-  HIGH: '#ef4444',
-};
-
-export default function GaugeChart({ value, riskLevel, label = 'Risk Score', size = 160 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
-  const currentRef = useRef(0);
+export default function GaugeChart({
+  showValue = true,
+  size = 140,
+  progress,
+  gap,
+  progressClassName,
+  trackClassName = "text-black/10 dark:text-white/10",
+  circleWidth = 14,
+  progressWidth = 14,
+  rounded = true,
+  className = "",
+  children,
+  value,
+  riskLevel,
+  label = "Risk Score",
+}: GaugeChartProps) {
+  const [shouldUseValue, setShouldUseValue] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const timeout = setTimeout(() => {
+      setShouldUseValue(true);
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, []);
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = (size * 0.65) * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size * 0.65}px`;
-    ctx.scale(dpr, dpr);
+  const actualProgress = progress !== undefined ? progress : (value ?? 0);
+  const actualGap = gap !== undefined ? gap : Math.round(size * 0.45);
 
-    const cx = size / 2;
-    const cy = size * 0.55;
-    const r = size * 0.38;
-    const strokeW = size * 0.07;
+  const radius = size / 2 - Math.max(progressWidth, circleWidth);
+  const circumference = Math.PI * radius * 2;
+  const adjustedProgress = shouldUseValue ? actualProgress : 0;
 
-    const targetColor = riskLevel ? RISK_COLORS[riskLevel] :
-      value <= 30 ? RISK_COLORS.LOW :
-      value <= 70 ? RISK_COLORS.MEDIUM :
-      RISK_COLORS.HIGH;
+  // Avoid values less than 0 and greater than 100
+  const validatedProgress =
+    adjustedProgress < 0 ? 0 : adjustedProgress > 100 ? 100 : adjustedProgress;
 
-    const draw = (v: number) => {
-      ctx.clearRect(0, 0, size, size * 0.65);
+  // Calculate the stroke-dashoffset for the progress circle considering the gap
+  const strokeDashoffsetProgress =
+    circumference - (validatedProgress / 100) * (circumference - actualGap);
 
-      // Track arc (background)
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, Math.PI, 0, false);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = strokeW;
-      ctx.lineCap = 'round';
-      ctx.stroke();
+  // Dynamic risk color styling if not explicitly overridden
+  const defaultProgressClass =
+    riskLevel === "LOW" || (!riskLevel && actualProgress <= 30)
+      ? "text-emerald-500"
+      : riskLevel === "MEDIUM" || (!riskLevel && actualProgress <= 70)
+      ? "text-amber-500"
+      : "text-red-500";
 
-      // Value arc
-      const angle = Math.PI + (v / 100) * Math.PI;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, Math.PI, angle, false);
-      ctx.strokeStyle = targetColor;
-      ctx.lineWidth = strokeW;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Center value text
-      ctx.fillStyle = '#0f172a';
-      ctx.font = `700 ${size * 0.17}px Inter, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(Math.round(v).toString(), cx, cy - size * 0.04);
-
-      // /100 label
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = `500 ${size * 0.075}px Inter, sans-serif`;
-      ctx.fillText('/100', cx, cy + size * 0.1);
-    };
-
-    cancelAnimationFrame(animRef.current);
-    const start = currentRef.current;
-    const diff = value - start;
-    const duration = 900;
-    const startTime = performance.now();
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3);
-      currentRef.current = start + diff * ease;
-      draw(currentRef.current);
-      if (t < 1) animRef.current = requestAnimationFrame(animate);
-    };
-
-    animRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [value, riskLevel, size]);
+  const effectiveProgressClass = progressClassName || defaultProgressClass;
 
   return (
-    <div className="gauge-container">
-      <canvas ref={canvasRef} />
-      <div className="gauge-label">{label}</div>
+    <div className={cn("gauge-chart-container", className)}>
+      <div className="gauge-chart-relative relative" style={{ width: size, height: size }}>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Background Circle */}
+          <circle
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+            fill="transparent"
+            stroke="currentColor"
+            strokeWidth={`${circleWidth}px`}
+            strokeDasharray={circumference}
+            strokeDashoffset={actualGap}
+            strokeLinecap={rounded ? "round" : "butt"}
+            className={cn("duration-500", trackClassName)}
+            transform={`rotate(${90 + (actualGap / (2 * circumference)) * 360} ${size / 2} ${size / 2})`}
+          />
+          {/* Progress Circle */}
+          <circle
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+            stroke="currentColor"
+            className={cn("duration-500", effectiveProgressClass)}
+            strokeWidth={`${progressWidth}px`}
+            strokeLinecap={rounded ? "round" : "butt"}
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffsetProgress}
+            transform={`rotate(${90 + (actualGap / (2 * circumference)) * 360} ${size / 2} ${size / 2})`}
+          />
+        </svg>
+
+        {showValue && (
+          <div className="gauge-center-content">
+            <div className="gauge-value-number" style={{ fontSize: Math.round(size / 3.6) }}>
+              {Math.round(actualProgress)}
+            </div>
+            <div className="gauge-value-sub">/100</div>
+          </div>
+        )}
+
+        {children}
+      </div>
+
+      {label && <div className="gauge-bottom-label">{label}</div>}
     </div>
   );
 }

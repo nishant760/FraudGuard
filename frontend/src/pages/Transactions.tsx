@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { getTransactions } from '../api/fraud';
 import type { TransactionHistoryItem, RiskLevel } from '../types';
 import RiskBadge from '../components/ui/RiskBadge';
+import GlowingCard from '../components/ui/GlowingCard';
+import KineticTitle from '../components/ui/KineticTitle';
 import {
   RefreshCw,
   Search,
@@ -14,6 +16,14 @@ import {
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
+
+const PRODUCT_LABELS: Record<string, string> = {
+  W: 'Web / Digital Products',
+  H: 'Home / Physical Goods',
+  C: 'Cash / ATM Withdrawal',
+  S: 'Services',
+  R: 'Retail / In-Store',
+};
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
@@ -30,6 +40,7 @@ export default function Transactions() {
   const [sortField, setSortField] = useState<keyof TransactionHistoryItem>('created_at');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
 
+  // Fetch Transactions
   const fetchTransactions = async () => {
     setLoading(true);
     setError(null);
@@ -37,7 +48,7 @@ export default function Transactions() {
       const data = await getTransactions();
       setTransactions(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
+      setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
       setLoading(false);
     }
@@ -45,7 +56,7 @@ export default function Transactions() {
 
   useEffect(() => {
     fetchTransactions();
-    const interval = setInterval(fetchTransactions, 20000); // Polling every 20s
+    const interval = setInterval(fetchTransactions, 20000);
     return () => clearInterval(interval);
   }, []);
 
@@ -62,7 +73,8 @@ export default function Transactions() {
         const query = searchQuery.toLowerCase();
         const matchesId = t.transaction_id.toLowerCase().includes(query);
         const matchesCard = t.card4?.toLowerCase().includes(query);
-        const matchesProduct = t.ProductCD?.toLowerCase().includes(query);
+        const productLabel = PRODUCT_LABELS[t.ProductCD || ''] || t.ProductCD || '';
+        const matchesProduct = t.ProductCD?.toLowerCase().includes(query) || productLabel.toLowerCase().includes(query);
         return matchesId || matchesCard || matchesProduct;
       }
       return true;
@@ -106,70 +118,76 @@ export default function Transactions() {
 
   return (
     <div className="page-content">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 className="page-title">Transaction History</h1>
-          <p className="page-subtitle">
-            Audit log of evaluated transactions, risk scores, and model classifications.
-          </p>
-        </div>
-        <button
-          onClick={fetchTransactions}
-          className="btn btn-outline btn-sm"
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh Transactions
-        </button>
-      </div>
+      <KineticTitle
+        title="Transaction History"
+        subtitle="Audit log of evaluated transactions, risk scores, and model classifications."
+        rightElement={
+          <button
+            onClick={fetchTransactions}
+            className="btn btn-outline btn-sm"
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh Transactions
+          </button>
+        }
+      />
 
       {/* Filter Toolbar */}
-      <div className="card card-sm mb-6">
-        <div className="filter-bar" style={{ marginBottom: 0 }}>
-          {/* Search */}
-          <div style={{ position: 'relative', flex: '1 1 240px' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              className="form-input"
-              style={{ paddingLeft: 36, width: '100%', height: 36, fontSize: 13 }}
-              placeholder="Search by TX ID, Card, Product..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-            />
-          </div>
+      <GlowingCard
+        className="mb-6"
+        fromColor="rgba(99, 102, 241, 0.3)"
+        viaColor="rgba(147, 197, 253, 0.2)"
+        toColor="rgba(99, 102, 241, 0.3)"
+        borderRadius="var(--radius-lg)"
+      >
+        <div className="card card-sm" style={{ border: 'none', background: 'transparent', boxShadow: 'none' }}>
+          <div className="filter-bar" style={{ marginBottom: 0 }}>
+            {/* Search */}
+            <div style={{ position: 'relative', flex: '1 1 240px' }}>
+              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                className="form-input"
+                style={{ paddingLeft: 36, width: '100%', height: 36, fontSize: 13 }}
+                placeholder="Search by TX ID, Card, Product..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+              />
+            </div>
 
-          {/* Risk Level Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Filter size={14} color="var(--text-muted)" />
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Risk:</span>
-            <select
-              className="form-select"
-              value={riskFilter}
-              onChange={(e) => { setRiskFilter(e.target.value); setPage(1); }}
-            >
-              <option value="ALL">All Risk Levels</option>
-              <option value="LOW">Low Risk</option>
-              <option value="MEDIUM">Medium Risk</option>
-              <option value="HIGH">High Risk</option>
-            </select>
-          </div>
+            {/* Risk Level Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Risk:</span>
+              <select
+                className="form-select"
+                value={riskFilter}
+                onChange={(e) => { setRiskFilter(e.target.value); setPage(1); }}
+              >
+                <option value="ALL">All Risk Levels</option>
+                <option value="LOW">Low Risk</option>
+                <option value="MEDIUM">Medium Risk</option>
+                <option value="HIGH">High Risk</option>
+              </select>
+            </div>
 
-          {/* Verdict Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Verdict:</span>
-            <select
-              className="form-select"
-              value={predFilter}
-              onChange={(e) => { setPredFilter(e.target.value); setPage(1); }}
-            >
-              <option value="ALL">All Verdicts</option>
-              <option value="0">Legitimate (0)</option>
-              <option value="1">Fraudulent (1)</option>
-            </select>
+            {/* Verdict Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Verdict:</span>
+              <select
+                className="form-select"
+                value={predFilter}
+                onChange={(e) => { setPredFilter(e.target.value); setPage(1); }}
+              >
+                <option value="ALL">All Verdicts</option>
+                <option value="0">Legitimate (0)</option>
+                <option value="1">Fraudulent (1)</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
+      </GlowingCard>
 
       {/* Error state */}
       {error && (
@@ -179,7 +197,13 @@ export default function Transactions() {
       )}
 
       {/* Data Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <GlowingCard
+        fromColor="rgba(99, 102, 241, 0.35)"
+        viaColor="rgba(168, 85, 247, 0.2)"
+        toColor="rgba(59, 130, 246, 0.35)"
+        borderRadius="var(--radius-lg)"
+      >
+        <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', background: 'transparent', boxShadow: 'none' }}>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
@@ -243,8 +267,18 @@ export default function Transactions() {
                         ${tx.transaction_amount.toFixed(2)}
                       </td>
                       <td>
-                        <span style={{ background: 'var(--bg-subtle)', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>
-                          {tx.ProductCD || 'W'}
+                        <span
+                          style={{
+                            background: 'var(--bg-subtle)',
+                            padding: '3px 8px',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap'
+                          }}
+                          title={`Dataset Code: ${tx.ProductCD || 'W'}`}
+                        >
+                          {PRODUCT_LABELS[tx.ProductCD || ''] || tx.ProductCD || 'Web / Digital Products'}
                         </span>
                       </td>
                       <td style={{ textTransform: 'capitalize' }}>
@@ -327,7 +361,8 @@ export default function Transactions() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </GlowingCard>
     </div>
   );
 }

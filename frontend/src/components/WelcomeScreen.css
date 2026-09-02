@@ -3,16 +3,15 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
+  max-height: 100vh;
   width: 100vw;
-  background-color: #020617;
-  /* Very subtle technology pattern via pure CSS linear-gradient */
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-color: transparent;
   position: relative;
-  overflow: hidden;
-  color: white;
+  overflow: hidden; /* Strictly prevents any scrolling */
+  color: #0f172a;
+  z-index: 1;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 /* Safe ambient background glow */
@@ -21,9 +20,9 @@
   top: 30%;
   left: 30%;
   transform: translate(-50%, -50%);
-  width: 70vw;
-  height: 70vw;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.12) 0%, rgba(2, 6, 23, 0) 70%);
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
   animation: pulse-slow 8s infinite alternate;
@@ -34,9 +33,9 @@
   bottom: 10%;
   right: 10%;
   transform: translate(50%, 50%);
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, rgba(2, 6, 23, 0) 70%);
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.07) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
   animation: pulse-slow 10s infinite alternate-reverse;
@@ -54,6 +53,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 98vh;
   animation: welcomeFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -70,50 +73,54 @@
 
 .welcome-icon-wrapper {
   background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.5);
+  margin-bottom: 10px;
+  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.35);
 }
 
 .welcome-title {
-  font-size: 46px;
+  font-size: 44px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-bottom: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+  margin-bottom: 12px;
+  color: #0f172a;
+  background: linear-gradient(180deg, #0f172a 0%, #334155 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .welcome-subtitle {
-  font-size: 16px;
-  color: #94a3b8;
-  max-width: 460px;
-  line-height: 1.6;
-  margin-bottom: 48px;
+  font-size: 14.5px;
+  color: #475569;
+  max-width: 480px;
+  line-height: 1.55;
+  margin-top: -2px;
+  margin-bottom: 24px;
 }
 
 /* Informational architecture tags */
 .welcome-tags {
   display: flex;
-  gap: 12px;
-  margin-bottom: 40px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .welcome-tag {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
   border-radius: 99px;
-  font-size: 13px;
-  color: #cbd5e1;
+  font-size: 12px;
+  color: #334155;
   font-weight: 500;
   letter-spacing: 0.01em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .welcome-btn {
@@ -126,16 +133,134 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.4);
+  box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.35);
 }
 
 .welcome-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.5);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
   background: linear-gradient(135deg, #4338ca, #4f46e5);
 }
 
 .welcome-btn:active {
   transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+/* GlareCard styling in WelcomeScreen */
+.welcome-glare-card {
+  width: 580px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 34px 32px 26px;
+}
+
+.glare-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.glare-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+}
+
+.glare-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  letter-spacing: 0.02em;
+}
+
+.glare-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.glare-brand-title {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+  margin: 0 0 10px;
+  line-height: 1.15;
+}
+
+.glare-brand-accent {
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glare-brand-subtitle {
+  font-size: 14.5px;
+  color: #94a3b8;
+  max-width: 440px;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+.glare-metrics-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glare-metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.glare-metric-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.01em;
+}
+
+.glare-metric-label {
+  font-size: 10.5px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+.glare-metric-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.08);
 }

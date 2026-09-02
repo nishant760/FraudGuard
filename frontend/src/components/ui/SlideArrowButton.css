@@ -1,0 +1,76 @@
+/* SlideArrowButton styles with animated slide-in effect */
+.group\/slide {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background-color: #ffffff;
+  padding: 8px 12px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.group\/slide:hover {
+  box-shadow: 0 10px 25px -3px rgba(111, 60, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.group\/slide:active {
+  transform: translateY(1px);
+}
+
+/* Sliding circle background with arrow */
+.group\/slide > div {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  height: 100%;
+  width: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 9999px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.group\/slide:hover > div {
+  width: 100%;
+}
+
+.group\/slide > div > span {
+  margin-right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group\/slide:hover > div > span {
+  transform: translateX(2px);
+}
+
+/* Button text label */
+.group\/slide > span {
+  position: relative;
+  left: 16px;
+  z-index: 10;
+  white-space: nowrap;
+  padding-left: 24px;
+  padding-right: 28px;
+  font-weight: 600;
+  color: #0f172a;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group\/slide:hover > span {
+  left: -8px;
+  color: #ffffff;
+}

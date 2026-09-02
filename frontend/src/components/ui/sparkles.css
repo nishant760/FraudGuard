@@ -1,0 +1,109 @@
+/* Sparkles title and laser beam styling */
+.sparkles-title-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.sparkles-title {
+  font-size: 42px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  line-height: 1.1;
+  margin: 0;
+  position: relative;
+  z-index: 20;
+  text-align: center;
+  background: linear-gradient(180deg, #0f172a 10%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sparkles-title-accent {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Light beams and particle zone below title */
+.sparkles-field-container {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  height: 44px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* Wide indigo laser glow */
+.sparkles-beam-indigo-blur {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+  filter: blur(2px);
+  z-index: 10;
+}
+
+/* Sharp indigo laser line */
+.sparkles-beam-indigo-sharp {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+  z-index: 11;
+}
+
+/* Intense cyan highlight center beam */
+.sparkles-beam-cyan-blur {
+  position: absolute;
+  top: 0;
+  left: 30%;
+  right: 30%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  filter: blur(3px);
+  z-index: 12;
+}
+
+/* Sharp cyan center line */
+.sparkles-beam-cyan-sharp {
+  position: absolute;
+  top: 0;
+  left: 30%;
+  right: 30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  z-index: 13;
+}
+
+.sparkles-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Radial fade mask to ensure particles seamlessly dissolve outwards */
+.sparkles-radial-mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  background: transparent;
+  mask-image: radial-gradient(ellipse 260px 70px at 50% 0%, black 35%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 260px 70px at 50% 0%, black 35%, transparent 100%);
+}

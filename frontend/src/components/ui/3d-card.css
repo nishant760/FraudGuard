@@ -1,0 +1,57 @@
+/* 3D Card styles with perspective and preserve-3d */
+.card-3d-perspective-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.card-3d-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  will-change: transform;
+}
+
+.card-3d-body {
+  width: 100%;
+  position: relative;
+  border-radius: 18px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-base, #e2e8f0);
+  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.25s cubic-bezier(0.2, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  padding: 18px;
+}
+
+.card-3d-inner:hover .card-3d-body {
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.10), 0 0 16px -4px rgba(99, 102, 241, 0.08);
+}
+
+.card-3d-body--low {
+  border-color: rgba(16, 185, 129, 0.25);
+}
+.card-3d-inner:hover .card-3d-body--low {
+  box-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.14), 0 0 18px -4px rgba(16, 185, 129, 0.10);
+}
+
+.card-3d-body--medium {
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.card-3d-inner:hover .card-3d-body--medium {
+  box-shadow: 0 12px 28px -6px rgba(245, 158, 11, 0.14), 0 0 18px -4px rgba(245, 158, 11, 0.10);
+}
+
+.card-3d-body--high {
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.card-3d-inner:hover .card-3d-body--high {
+  box-shadow: 0 12px 28px -6px rgba(239, 68, 68, 0.14), 0 0 18px -4px rgba(239, 68, 68, 0.10);
+}
+
+.card-3d-item {
+  will-change: transform;
+}

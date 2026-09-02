@@ -1,0 +1,170 @@
+/* Text Animation & Kinetic Title Card Styles */
+.title-card-container {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.title-card-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 30px;
+  /* Distinctive cool indigo-tinted gradient distinguishing title from content cards */
+  background: linear-gradient(135deg, #f0f4ff 0%, #ede9fe 55%, #f8fafc 100%);
+  border-radius: inherit;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Radiant corner ambient glow */
+.title-card-inner::after {
+  content: '';
+  position: absolute;
+  top: -25px;
+  right: -25px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 70%);
+  pointer-events: none;
+}
+
+.title-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 82%;
+}
+
+.title-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Bold vertical accent pill preceding title */
+.title-accent-pill {
+  width: 5px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.55);
+  flex-shrink: 0;
+}
+
+.title-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.title-card-subtitle {
+  margin: 0;
+  margin-left: 19px;
+  font-size: 14px;
+  color: #334155;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Stage and Title Typography - Bolder, crisper, prominent */
+.text-animation-stage {
+  display: inline-grid;
+  grid-template-areas: 'title';
+  align-items: center;
+  position: relative;
+  overflow: visible;
+  width: 100%;
+}
+
+.text-animation-title {
+  margin: 0;
+  grid-area: title;
+  transform-style: preserve-3d;
+  font-size: 26px;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  display: inline-block;
+  /* Extra bold, vibrant underline */
+  text-decoration: underline;
+  text-decoration-thickness: 4.5px;
+  text-underline-offset: 8px;
+  text-decoration-color: #4f46e5;
+  text-decoration-skip-ink: auto;
+  transition: text-decoration-color 0.25s ease;
+}
+
+.text-animation-title:hover {
+  text-decoration-color: #4338ca;
+}
+
+.text-animation-unit {
+  display: inline-block;
+  white-space: pre;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-origin: 50% 55%;
+  will-change: transform, opacity, filter;
+  opacity: 0;
+  filter: blur(3px);
+  transform: translateY(6px) scale(0.98);
+  animation: kineticEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.text-animation-unit.line {
+  display: block;
+}
+
+.text-animation-kinetic-line {
+  position: relative;
+  height: 72px;
+  width: min(92%, 270px);
+}
+
+.text-animation-kinetic-stack {
+  position: relative;
+  height: 132px;
+  width: min(92%, 270px);
+}
+
+.text-animation-kinetic-word {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  white-space: nowrap;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform, opacity, filter;
+}
+
+.text-animation-fallback {
+  opacity: 0.74;
+}
+
+/* Subtle, smooth entrance keyframes */
+@keyframes kineticEntrance {
+  0% {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(6px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Interactive micro-reaction on hover */
+.text-animation-title:hover .text-animation-unit {
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.text-animation-title:hover .text-animation-unit:hover {
+  transform: translateY(-1px);
+  color: #4f46e5;
+}

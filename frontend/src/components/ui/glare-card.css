@@ -1,0 +1,92 @@
+/* Glare Card styles with light-following glare and 3D tilt */
+.glare-container {
+  --m-x: 50%;
+  --m-y: 50%;
+  --r-x: 0deg;
+  --r-y: 0deg;
+  --bg-x: 50%;
+  --bg-y: 50%;
+  --duration: 300ms;
+  --radius: 24px;
+  --easing: cubic-bezier(0.2, 0, 0.2, 1);
+  --transition: var(--duration) var(--easing);
+  position: relative;
+  isolation: isolate;
+  perspective: 900px;
+  display: inline-block;
+  will-change: transform;
+  margin-bottom: 24px;
+}
+
+.glare-card-grid {
+  position: relative;
+  display: grid;
+  grid-template-areas: "card";
+  border-radius: var(--radius);
+  transform: rotateY(var(--r-y)) rotateX(var(--r-x));
+  transform-style: preserve-3d;
+  transition: transform var(--transition);
+  overflow: hidden;
+  box-shadow: 
+    0 16px 36px -10px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(226, 232, 240, 0.8);
+}
+
+.glare-container:hover .glare-card-grid {
+  box-shadow: 
+    0 24px 48px -12px rgba(79, 70, 229, 0.28),
+    0 0 35px -5px rgba(99, 102, 241, 0.22),
+    0 0 0 1px rgba(129, 140, 248, 0.4);
+}
+
+.glare-content-container {
+  grid-area: card;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(145deg, #090d16 0%, #111827 50%, #1e1b4b 100%);
+  color: #ffffff;
+  padding: 32px 40px;
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+
+.glare-foil-layer {
+  grid-area: card;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition);
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--m-x) var(--m-y),
+    rgba(255, 255, 255, 0.85) 10%,
+    rgba(255, 255, 255, 0.45) 30%,
+    rgba(165, 180, 252, 0.3) 55%,
+    transparent 80%
+  );
+}
+
+.glare-container:hover .glare-foil-layer {
+  opacity: 0.9;
+}
+
+.glare-shine-layer {
+  grid-area: card;
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition);
+  mix-blend-mode: color-dodge;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--m-x) var(--m-y),
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.45) 22%,
+    transparent 65%
+  );
+}
+
+.glare-container:hover .glare-shine-layer {
+  opacity: 0.95;
+}

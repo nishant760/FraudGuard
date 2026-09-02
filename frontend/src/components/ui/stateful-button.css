@@ -1,0 +1,98 @@
+/* Stateful Button Styling */
+.stateful-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.35);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  min-width: 175px;
+  height: 44px;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.stateful-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.45);
+  transform: translateY(-1px);
+}
+
+.stateful-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.stateful-button:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.stateful-button--loading {
+  background: linear-gradient(135deg, #3730a3, #4f46e5);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+  cursor: wait;
+}
+
+.stateful-button--success {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+.stateful-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  animation: statefulFadeIn 0.2s ease-out;
+}
+
+@keyframes statefulFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.stateful-spinner {
+  animation: statefulSpin 0.9s linear infinite;
+}
+
+@keyframes statefulSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.stateful-check {
+  animation: statefulPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes statefulPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

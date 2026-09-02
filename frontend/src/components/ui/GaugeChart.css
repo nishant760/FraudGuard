@@ -1,0 +1,77 @@
+/* GaugeChart styling */
+.gauge-chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-chart-relative {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-center-content {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.gauge-value-number {
+  font-family: 'Inter', ui-monospace, monospace;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-value-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 4px;
+}
+
+.gauge-bottom-label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Color classes for Gauge */
+.text-emerald-500,
+.text-green-500 {
+  color: #10b981;
+}
+
+.text-amber-500 {
+  color: #f59e0b;
+}
+
+.text-red-500 {
+  color: #ef4444;
+}
+
+.text-black\/10 {
+  color: rgba(15, 23, 42, 0.08);
+}
+
+.dark .text-white\/10 {
+  color: rgba(255, 255, 255, 0.1);
+}
+
+.duration-500 {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
