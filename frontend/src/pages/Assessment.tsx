@@ -88,11 +88,11 @@ export default function Assessment() {
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ flex: '1 1 500px', minWidth: 0 }}>
           <GlowingCard
-            fromColor="rgba(99, 102, 241, 0.35)"
-            viaColor="rgba(168, 85, 247, 0.2)"
-            toColor="rgba(59, 130, 246, 0.35)"
+            fromColor="#e2e8f0"
+            viaColor="#cbd5e1"
+            toColor="#e2e8f0"
             borderRadius="var(--radius-lg)"
-            className="mb-6"
+            className="mb-6 watery-black-tint"
           >
             <div className="card" style={{ marginBottom: 0, border: 'none', background: 'transparent', boxShadow: 'none' }}>
               <div className="card-header">

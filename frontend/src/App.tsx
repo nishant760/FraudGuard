@@ -6,7 +6,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import Assessment from './pages/Assessment';
 import Analytics from './pages/Analytics';
 import Transactions from './pages/Transactions';
-import BlinkingDots from './components/ui/BlinkingDots';
+import MosaicWaves from './components/ui/MosaicWaves';
+// import BlinkingDots from './components/ui/BlinkingDots';
 import type { RiskLevel } from './lib/dotsEvent';
 
 const DEFAULT_DOTS_COLOR = '#10b981'; // Original emerald green
@@ -60,16 +61,16 @@ export default function App() {
 
   return (
     <>
-      {/* Background Animated Blinking Dots Grid */}
-      <BlinkingDots
+      {/* Background Animated Mosaic Waves Grid */}
+      <MosaicWaves
         dotSize={1.15}
         gridGap={9}
         color={dotsColor}
         backgroundColor="#ffffff"
-        twinkleSpeed={0.75}
-        twinkleStrength={0.95}
-        minBrightness={0.11}
-        maxOpacity={0.95}
+        waveSpeed={0.85}
+        waveFrequency={0.016}
+        minOpacity={0.12}
+        maxOpacity={0.92}
         interactive={true}
       />
 

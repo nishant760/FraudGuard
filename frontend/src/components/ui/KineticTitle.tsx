@@ -1,5 +1,6 @@
 import type React from 'react';
 import GlowingCard from './GlowingCard';
+import UnderlineHoverText from './UnderlineHoverText';
 import './KineticTitle.css';
 
 interface KineticTitleProps {
@@ -15,8 +16,6 @@ export default function KineticTitle({
   className = '',
   rightElement,
 }: KineticTitleProps) {
-  const words = title.split(' ');
-
   return (
     <div className="title-card-container">
       <GlowingCard
@@ -31,18 +30,11 @@ export default function KineticTitle({
               <span className="title-accent-pill" aria-hidden="true" />
               <div className="text-animation-stage">
                 <h1 className={`page-title text-animation-title ${className}`}>
-                  {words.map((word, index) => (
-                    <span
-                      key={`${word}-${index}`}
-                      className="text-animation-unit"
-                      style={{
-                        animationDelay: `${index * 50}ms`,
-                      }}
-                    >
-                      {word}
-                      {index < words.length - 1 ? ' ' : ''}
-                    </span>
-                  ))}
+                  <UnderlineHoverText
+                    text={title}
+                    fontSize="inherit"
+                    fontWeight="inherit"
+                  />
                 </h1>
               </div>
             </div>
@@ -54,3 +46,4 @@ export default function KineticTitle({
     </div>
   );
 }
+

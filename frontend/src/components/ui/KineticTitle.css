@@ -89,17 +89,7 @@
   letter-spacing: -0.03em;
   line-height: 1.25;
   display: inline-block;
-  /* Extra bold, vibrant underline */
-  text-decoration: underline;
-  text-decoration-thickness: 4.5px;
-  text-underline-offset: 8px;
-  text-decoration-color: #4f46e5;
-  text-decoration-skip-ink: auto;
-  transition: text-decoration-color 0.25s ease;
-}
-
-.text-animation-title:hover {
-  text-decoration-color: #4338ca;
+  text-decoration: none;
 }
 
 .text-animation-unit {

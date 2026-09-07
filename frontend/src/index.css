@@ -420,12 +420,12 @@ textarea {
   border-radius: var(--radius-lg);
   padding: 24px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
 .card:hover {
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
-  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 14px 28px -4px rgba(99, 102, 241, 0.1), 0 8px 12px -4px rgba(15, 23, 42, 0.05);
+  border-color: rgba(99, 102, 241, 0.25);
 }
 
 .card-sm {
@@ -471,12 +471,12 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: box-shadow var(--transition-base), transform var(--transition-base);
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .metric-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -4px rgba(15, 23, 42, 0.1), 0 6px 12px -2px rgba(99, 102, 241, 0.08);
+  transform: translateY(-4.5px);
 }
 
 .metric-card-icon {
@@ -757,6 +757,11 @@ textarea {
   border-color: var(--risk-low-border);
 }
 
+.result-verdict-banner.medium {
+  background: var(--risk-medium-bg);
+  border-color: var(--risk-medium-border);
+}
+
 .result-verdict-banner.fraud {
   background: var(--risk-high-bg);
   border-color: var(--risk-high-border);
@@ -773,6 +778,7 @@ textarea {
 }
 
 .verdict-icon.legitimate { background: var(--risk-low-accent); }
+.verdict-icon.medium     { background: var(--risk-medium-accent); }
 .verdict-icon.fraud       { background: var(--risk-high-accent); }
 
 .verdict-label {
@@ -782,6 +788,7 @@ textarea {
 }
 
 .verdict-label.legitimate { color: var(--risk-low-text); }
+.verdict-label.medium     { color: var(--risk-medium-text); }
 .verdict-label.fraud       { color: var(--risk-high-text); }
 
 .verdict-sub {

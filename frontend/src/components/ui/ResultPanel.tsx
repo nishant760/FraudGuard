@@ -2,7 +2,7 @@ import type { PredictResponse } from '../../types';
 import RiskBadge from './RiskBadge';
 import GaugeChart from './GaugeChart';
 import { CardContainer, CardBody, CardItem } from './3d-card';
-import { ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 interface Props {
   result: PredictResponse;
@@ -15,25 +15,34 @@ const RISK_PROB_COLORS: Record<string, string> = {
 };
 
 export default function ResultPanel({ result }: Props) {
-  const isLegitimate = result.prediction === 0;
+  const isLow = result.risk_level === 'LOW';
+  const isMedium = result.risk_level === 'MEDIUM';
+  const isHigh = result.risk_level === 'HIGH';
+
+  const bannerClass = isLow ? 'legitimate' : isMedium ? 'medium' : 'fraud';
+  const verdictLabel = isLow
+    ? 'Transaction Legitimate'
+    : isMedium
+    ? 'Suspicious Activity'
+    : 'Fraud Detected';
+
   const probPercent = (result.fraud_probability * 100).toFixed(2);
-  const color = RISK_PROB_COLORS[result.risk_level];
+  const color = RISK_PROB_COLORS[result.risk_level] || '#6366f1';
 
   return (
     <CardContainer className="w-full">
       <CardBody className={`card-3d-body--${result.risk_level.toLowerCase()}`}>
         {/* Verdict Banner with 3D elevation */}
         <CardItem translateZ="15" className="w-full">
-          <div className={`result-verdict-banner ${isLegitimate ? 'legitimate' : 'fraud'}`}>
-            <div className={`verdict-icon ${isLegitimate ? 'legitimate' : 'fraud'}`}>
-              {isLegitimate
-                ? <ShieldCheck size={22} color="white" strokeWidth={2.5} />
-                : <ShieldAlert size={22} color="white" strokeWidth={2.5} />
-              }
+          <div className={`result-verdict-banner ${bannerClass}`}>
+            <div className={`verdict-icon ${bannerClass}`}>
+              {isLow && <ShieldCheck size={22} color="white" strokeWidth={2.5} />}
+              {isMedium && <AlertTriangle size={22} color="white" strokeWidth={2.5} />}
+              {isHigh && <ShieldAlert size={22} color="white" strokeWidth={2.5} />}
             </div>
             <div>
-              <div className={`verdict-label ${isLegitimate ? 'legitimate' : 'fraud'}`}>
-                {isLegitimate ? 'Transaction Legitimate' : 'Fraud Detected'}
+              <div className={`verdict-label ${bannerClass}`}>
+                {verdictLabel}
               </div>
               <div className="verdict-sub">
                 ID: <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{result.transaction_id}</span>

@@ -4,19 +4,19 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  transition: box-shadow 0.35s ease, transform 0.25s ease;
+  transition: box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .glowing-card-wrapper:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 6px 16px -4px rgba(99, 102, 241, 0.12);
 }
 
 .glowing-card-glow {
   position: absolute;
   inset: -1px;
-  filter: blur(10px);
+  filter: blur(12px);
   pointer-events: none;
   z-index: 0;
   transition: opacity 0.35s cubic-bezier(0.2, 0, 0.2, 1);
@@ -24,7 +24,7 @@
 }
 
 .glowing-card-wrapper:hover .glowing-card-glow {
-  opacity: 0.32 !important; /* Soft, subtle, not blinding */
+  opacity: 0.42 !important; /* Soft, luminous 3D highlight */
 }
 
 .glowing-card-content {
@@ -35,4 +35,47 @@
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.35s ease;
 }
+
+/* Clean light solid card styling - No glassmorphism, pure neutral light tones */
+.glowing-card-wrapper.watery-black-tint {
+  background: #e2e8f0 !important;
+}
+
+.glowing-card-wrapper.watery-black-tint .glowing-card-glow {
+  display: none !important;
+}
+
+.glowing-card-wrapper.watery-black-tint:hover {
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.glowing-card-wrapper.watery-black-tint .glowing-card-content {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.glowing-card-wrapper.watery-black-tint:hover .glowing-card-content {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.glowing-card-wrapper.watery-black-tint .form-input,
+.glowing-card-wrapper.watery-black-tint .form-select {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.glowing-card-wrapper.watery-black-tint .form-input:focus,
+.glowing-card-wrapper.watery-black-tint .form-select:focus {
+  background: #ffffff;
+  border-color: var(--primary-500, #6366f1);
+}
+
+.glowing-card-wrapper.watery-black-tint:hover .form-input,
+.glowing-card-wrapper.watery-black-tint:hover .form-select {
+  border-color: #cbd5e1;
+}
+

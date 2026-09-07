@@ -43,6 +43,7 @@ export interface TransactionHistoryItem {
   fraud_probability: number;
   risk_score: number;
   risk_level: RiskLevel;
+  model_used?: string;
   created_at: string;
 }
 

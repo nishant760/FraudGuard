@@ -4,6 +4,7 @@ import type { TransactionHistoryItem, RiskLevel } from '../types';
 import RiskBadge from '../components/ui/RiskBadge';
 import GlowingCard from '../components/ui/GlowingCard';
 import KineticTitle from '../components/ui/KineticTitle';
+import HoldExpandModal from '../components/ui/HoldExpandModal';
 import {
   RefreshCw,
   Search,
@@ -13,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  Eye,
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -29,6 +31,7 @@ export default function Transactions() {
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [holdingTx, setHoldingTx] = useState<TransactionHistoryItem | null>(null);
 
   // Filters
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
@@ -196,6 +199,12 @@ export default function Transactions() {
         </div>
       )}
 
+      {/* Interactive Hold Hint Banner */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14, fontSize: 12, color: 'var(--primary-700)', background: 'var(--primary-50)', padding: '6px 14px', borderRadius: 20, width: 'fit-content', border: '1px solid var(--primary-100)' }}>
+        <Eye size={13} />
+        <span><strong>Interactive:</strong> Press &amp; hold any transaction row to expand full details in real-time. Release to close.</span>
+      </div>
+
       {/* Data Table */}
       <GlowingCard
         fromColor="rgba(99, 102, 241, 0.35)"
@@ -259,7 +268,13 @@ export default function Transactions() {
                 paginatedData.map((tx) => {
                   const isFraud = tx.prediction === 1;
                   return (
-                    <tr key={tx.transaction_id}>
+                    <tr
+                      key={tx.transaction_id}
+                      className="hold-expand-row"
+                      onMouseDown={() => setHoldingTx(tx)}
+                      onTouchStart={() => setHoldingTx(tx)}
+                      title="Press & hold to expand details"
+                    >
                       <td className="td-mono" style={{ fontWeight: 600 }}>
                         {tx.transaction_id.slice(0, 8)}...
                       </td>
@@ -330,10 +345,9 @@ export default function Transactions() {
             </div>
             <div className="pagination-controls">
               <button
-                className="page-btn"
+                className="pagination-btn"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                
               >
                 <ChevronLeft size={16} />
               </button>
@@ -345,7 +359,6 @@ export default function Transactions() {
                   key={p}
                   className={`page-btn ${p === page ? 'active' : ''}`}
                   onClick={() => setPage(p)}
-                  
                 >
                   {p}
                 </button>
@@ -354,7 +367,6 @@ export default function Transactions() {
                 className="page-btn"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                
               >
                 <ChevronRight size={16} />
               </button>
@@ -363,6 +375,12 @@ export default function Transactions() {
         )}
         </div>
       </GlowingCard>
+
+      {/* Hold-to-Expand Full-Screen Modal */}
+      <HoldExpandModal
+        transaction={holdingTx}
+        onClose={() => setHoldingTx(null)}
+      />
     </div>
   );
 }

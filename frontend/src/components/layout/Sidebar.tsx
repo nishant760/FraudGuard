@@ -1,15 +1,16 @@
-import { NavLink } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { checkHealth } from '../../api/fraud';
-import {
-  ShieldCheck,
-  LayoutDashboard,
-  BarChart3,
-  TableProperties,
-  Cpu,
-} from 'lucide-react';
+import { ShieldCheck, Cpu } from 'lucide-react';
+import MenuAnimation, { type MenuItemObject } from '../ui/MenuAnimation';
+// import AvatarList from '../ui/AvatarList';
 
 type HealthStatus = 'checking' | 'online' | 'offline';
+
+const NAV_ITEMS: MenuItemObject[] = [
+  { label: 'Transaction Assessment', path: '/', end: true },
+  { label: 'Analytics & Models', path: '/analytics' },
+  { label: 'Transaction History', path: '/transactions' },
+];
 
 export default function Sidebar() {
   const [health, setHealth] = useState<HealthStatus>('checking');
@@ -47,30 +48,7 @@ export default function Sidebar() {
       <nav className="sidebar-nav">
         <div className="sidebar-section-label">Modules</div>
 
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        >
-          <LayoutDashboard className="nav-link-icon" />
-          Transaction Assessment
-        </NavLink>
-
-        <NavLink
-          to="/analytics"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        >
-          <BarChart3 className="nav-link-icon" />
-          Analytics &amp; Models
-        </NavLink>
-
-        <NavLink
-          to="/transactions"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        >
-          <TableProperties className="nav-link-icon" />
-          Transaction History
-        </NavLink>
+        <MenuAnimation menuItems={NAV_ITEMS} />
 
         <div className="sidebar-section-label" style={{ marginTop: 24 }}>ML Pipeline Info</div>
         <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>

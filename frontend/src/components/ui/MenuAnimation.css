@@ -1,0 +1,91 @@
+/* MenuAnimation styles for side navigation bar */
+
+.menu-animation-container {
+  display: flex;
+  min-width: fit-content;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  padding: 0 4px;
+}
+
+.menu-animation-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md, 8px);
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.menu-animation-item:hover {
+  background-color: var(--primary-50, rgba(99, 102, 241, 0.08));
+}
+
+.menu-animation-item.active {
+  background-color: var(--primary-50, rgba(99, 102, 241, 0.12));
+}
+
+/* Arrow Icon animation */
+.menu-animation-arrow {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transform: translateX(-120%);
+  opacity: 0;
+  color: var(--text-primary, #0f172a);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.3s ease;
+  pointer-events: none;
+}
+
+.menu-animation-item:hover .menu-animation-arrow,
+.menu-animation-item.active .menu-animation-arrow,
+.group\/menu:hover .menu-animation-arrow {
+  transform: translateX(0);
+  opacity: 1;
+  color: var(--primary-600, #4f46e5);
+}
+
+/* Text label animation */
+.menu-animation-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-tertiary, #475569);
+  transform: translateX(-18px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.3s ease,
+              font-weight 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.menu-animation-item:hover .menu-animation-text,
+.menu-animation-item.active .menu-animation-text,
+.group\/menu:hover .menu-animation-text {
+  transform: translateX(0);
+  color: var(--primary-600, #4f46e5);
+}
+
+.menu-animation-item.active .menu-animation-text {
+  font-weight: 600;
+  color: var(--primary-700, #4338ca);
+}
+
+/* Active indicator bar on the left edge */
+.menu-animation-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: var(--primary-600, #4f46e5);
+  border-radius: 0 3px 3px 0;
+}
