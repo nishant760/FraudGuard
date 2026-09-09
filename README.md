@@ -1,114 +1,173 @@
-# Financial Transaction Fraud Detection and Risk Intelligence Platform
+# Financial Transaction Fraud Detection & Real-Time Streaming Intelligence Platform (FraudGuard-AI)
 
 ## Overview
-This is a final-year academic prototype demonstrating an end-to-end Machine Learning pipeline integrated with a FastAPI backend and a React frontend. The platform evaluates financial transactions in real-time using a trained XGBoost model and provides a comprehensive dashboard for risk intelligence and analytics.
+**FraudGuard-AI** is an end-to-end enterprise-grade Fraud Detection and Risk Intelligence Platform. It provides two complementary operational modes:
+1. **Interactive Batch & Web API Mode (`/backend`, `/frontend`, `/ml`)**: A FastAPI service and React 19 dashboard evaluating single/batch transactions and visualizing risk metrics.
+2. **Real-Time Streaming Engine (`/streaming`)**: An event-driven Kafka streaming pipeline simulating live transaction streams from the **PaySim mobile money dataset**, performing real-time sliding-window velocity tracking, ML scoring with balance discrepancy analysis, and instant alerting.
 
-## Architecture Overview
-The platform consists of three main modules:
-1. **Machine Learning Pipeline (`/ml`)**: Preprocesses the IEEE-CIS Fraud Detection dataset, trains models, and exports the winning model (`XGBoost`) along with its preprocessor.
-2. **Backend API (`/backend`)**: A FastAPI application that serves the ML model, handles API requests from the frontend, and stores transaction history in a local SQLite database.
-3. **Frontend Dashboard (`/frontend`)**: A React 19 application built with Vite that provides a user-friendly interface to submit transactions, view history, and analyze risk distributions.
+---
 
-## Technology Stack
-- **Frontend**: React 19, TypeScript, Vite, React Router, Recharts, Tailwind CSS concepts
-- **Backend**: Python 3, FastAPI, SQLAlchemy, SQLite, Pydantic
-- **Machine Learning**: Scikit-Learn, XGBoost, Pandas, NumPy, Joblib
+## Real-Time Streaming Architecture (`/streaming`)
+
+```
+                  ┌─────────────────────────────────────────────────────────┐
+                  │                 PaySim Dataset (CSV)                    │
+                  └──────────────────────────┬──────────────────────────────┘
+                                             │
+                                             ▼
+                             ┌───────────────────────────────┐
+                             │     producer.py (Stream)      │
+                             │  • Time-ordered by `step`     │
+                             │  • TRANSFER & CASH_OUT filter │
+                             │  • Configurable delay / rate  │
+                             └───────────────┬───────────────┘
+                                             │
+                                             ▼
+                             ┌───────────────────────────────┐
+                             │   Kafka Topic: transactions   │
+                             └───────────────┬───────────────┘
+                                             │
+                                             ▼
+                             ┌───────────────────────────────┐
+                             │     consumer.py (Scorer)      │
+                             │  • Real-time sliding window   │
+                             │  • Balance discrepancy feats  │
+                             │  • Trained ML model scoring   │
+                             │  • SQLite & file logging      │
+                             └───────┬───────────────┬───────┘
+                                     │               │
+                     (All Txns)      ▼               ▼  (If Flagged Fraud)
+               ┌───────────────────────┐   ┌───────────────────────────┐
+               │ predictions.db / log  │   │ Kafka Topic: fraud_alerts │
+               └───────────────────────┘   └─────────────┬─────────────┘
+                                                         │
+                                                         ▼
+                                           ┌───────────────────────────┐
+                                           │    alert_consumer.py      │
+                                           │  • Real-time CLI Alerts   │
+                                           │  • Discrepancy & velocity │
+                                           └───────────────────────────┘
+```
+
+### PaySim Dataset & Fraud Characteristics
+The system uses the **PaySim synthetic mobile money financial dataset**, simulating 30 days of real-world mobile transaction logs (744 steps, where 1 step = 1 hour).
+
+| Column Name | Description | Key Fraud Relevance |
+| :--- | :--- | :--- |
+| `step` | Time step in hours (1..744) | Preserves chronological stream ordering and time-of-day dynamics. |
+| `type` | `CASH_IN`, `CASH_OUT`, `DEBIT`, `PAYMENT`, `TRANSFER` | **Fraud only occurs in `TRANSFER` and `CASH_OUT`** transactions. |
+| `amount` | Transaction value in local currency | Fraudulent transfers attempt large account-draining sums. |
+| `nameOrig` | Customer who initiated the transaction | Grouping key for velocity burst calculation. |
+| `oldbalanceOrg` / `newbalanceOrig` | Sender balances before and after transaction | Creates **origin balance discrepancy**: `(oldbalanceOrg - amount) - newbalanceOrig`. |
+| `nameDest` | Recipient customer or merchant | Used to differentiate peer vs merchant transactions. |
+| `oldbalanceDest` / `newbalanceDest` | Recipient balances before and after transaction | Creates **destination balance discrepancy**: `(oldbalanceDest + amount) - newbalanceDest`. |
+| `isFraud` | Ground-truth fraud label (0 or 1) | Target classification label. |
+
+### Balance Discrepancy & Velocity Feature Engineering
+1. **Origin Discrepancy (`errorBalanceOrig`)**: $\text{errorBalanceOrig} = (\text{oldbalanceOrg} - \text{amount}) - \text{newbalanceOrig}$. In normal transactions, this is 0. In fraud, fraudsters often drain the account completely or attempt unauthorized overdrafts.
+2. **Destination Discrepancy (`errorBalanceDest`)**: $\text{errorBalanceDest} = (\text{oldbalanceDest} + \text{amount}) - \text{newbalanceDest}$. Fraudulent recipients often show 0 balance before and after (immediate cash-out or mule routing).
+3. **Sliding-Window Velocity Features (`sliding_window.py`)**: Tracks rolling $N$-step history per `nameOrig`:
+   - `orig_txn_count_window`: Number of transactions from sender in the last $N$ steps.
+   - `orig_amount_sum_window`: Total monetary volume sent in the last $N$ steps.
+   - `orig_amount_avg_window`: Average monetary volume per transaction in the window.
+
+---
 
 ## Project Structure
+
 ```
-major-project/
-├── ml/                       # ML Pipeline & Inference Scripts
-│   ├── models/               # Saved model artifacts (.joblib)
-│   ├── predict.py            # Main inference function
-│   ├── preprocess.py         # Feature engineering logic
-│   ├── risk_score.py         # Risk level logic
-│   └── train.py / evaluate.py
-├── backend/                  # FastAPI Application
-│   ├── app/                  # Routes, schemas, and database setup
-│   ├── requirements.txt      # Python dependencies
-│   ├── fraud_detection.db    # SQLite Database
-│   └── test_api.py           # API endpoint tests
-├── frontend/                 # React Dashboard
-│   ├── src/                  # React components, pages, API clients
-│   └── package.json          # Node dependencies
+FraudGuard-AI/
+├── docker-compose.yml        # Local Apache Kafka (KRaft mode, no ZooKeeper)
+├── streaming/                # Real-Time Kafka Streaming Engine
+│   ├── docker-compose.yml    # Kafka cluster setup
+│   ├── config.py             # Central streaming configuration
+│   ├── requirements.txt      # Python dependencies for streaming & ML
+│   ├── sliding_window.py     # Stateful rolling-window velocity engine
+│   ├── feature_pipeline.py   # Shared feature extraction pipeline
+│   ├── generate_sample_data.py # Sample PaySim dataset generator
+│   ├── train.py              # ML training with SMOTE & PaySim features
+│   ├── producer.py           # Time-ordered Kafka transaction stream producer
+│   ├── consumer.py           # Real-time scoring consumer & SQLite recorder
+│   ├── alert_consumer.py     # Real-time high-visibility alert monitor
+│   ├── data/                 # Location for paysim.csv / paysim_sample.csv
+│   └── models/               # Saved models (paysim_model.joblib)
+├── ml/                       # Original IEEE-CIS Batch ML Pipeline
+├── backend/                  # FastAPI Application & SQLite DB
+├── frontend/                 # React 19 + Vite Dashboard
 └── README.md
 ```
 
-## How the ML Prediction Flow Works
-1. The frontend submits a transaction via `POST /predict` containing raw fields (e.g., `TransactionAmt`, `TransactionDT`, `card1`, `ProductCD`).
-2. The FastAPI backend receives the request and passes the data dictionary to the ML module (`ml/predict.py`).
-3. The ML module internally derives temporal features (`tx_hour`, `tx_day`), coarsens categorical domains, and applies the saved `selected_preprocessor.joblib`.
-4. The processed features are fed into `selected_model.joblib` (XGBoost) which outputs a binary prediction and fraud probability.
-5. A risk score (0-100) and risk level (`LOW`, `MEDIUM`, `HIGH`) are computed.
-6. The backend stores the result in SQLite and returns it to the frontend for display.
+---
 
-## Installation & Setup
+## How to Run the Streaming Pipeline
 
-### macOS Compatibility Note
-If you are running this on macOS (especially Apple Silicon), XGBoost requires `libomp`. Install it using Homebrew:
+### Step 1: Start Apache Kafka via Docker
+Spin up Kafka in KRaft mode (topics `transactions` and `fraud_alerts` are automatically created):
 ```bash
-HOMEBREW_NO_AUTO_UPDATE=1 brew install libomp
+docker compose up -d
+```
+Verify Kafka is running:
+```bash
+docker ps
 ```
 
-### 1. Backend Setup
+### Step 2: Install Streaming Dependencies
 ```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
+cd streaming
 pip install -r requirements.txt
 ```
 
-### 2. Frontend Setup
+### Step 3: Train the PaySim Model (if not already trained)
+You can train the model on the sample dataset or your full PaySim CSV:
 ```bash
-cd frontend
-npm install
+# Using sample / auto-generated data:
+python train.py
+
+# Or specifying your downloaded Kaggle PaySim CSV:
+python train.py --data data/paysim.csv
 ```
 
-## Running the Application
+### Step 4: Start the Alert Consumer (Terminal 1)
+In your first terminal, start the alert monitor:
+```bash
+python alert_consumer.py
+```
 
-### Start the Backend
-Open a terminal, activate the virtual environment, and run:
+### Step 5: Start the Real-Time Scoring Consumer (Terminal 2)
+In your second terminal, start the scoring service:
+```bash
+python consumer.py
+```
+
+### Step 6: Start the Transaction Stream Producer (Terminal 3)
+In your third terminal, start streaming transactions:
+```bash
+# Streams TRANSFER and CASH_OUT rows with 0.05s delay:
+python producer.py
+
+# Optional: Stream all transaction types:
+python producer.py --include-all-types
+
+# Optional: Adjust delay / speed:
+python producer.py --delay 0.01
+```
+
+---
+
+## How to Run the Web Dashboard & API
+
+### 1. Start the Backend API
 ```bash
 cd backend
 source venv/bin/activate
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
-The API will be available at `http://localhost:8000`.
-API documentation is at `http://localhost:8000/docs`.
+- API Docs: `http://localhost:8000/docs`
 
-### Start the Frontend
-Open a new terminal and run:
+### 2. Start the Frontend Dashboard
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
-The dashboard will be available at `http://localhost:5173`.
-
-## Example API Request
-**POST /predict**
-```json
-{
-  "TransactionAmt": 450.0,
-  "ProductCD": "C",
-  "card1": 12345,
-  "card4": "mastercard",
-  "card6": "credit",
-  "P_emaildomain": "yahoo.com",
-  "TransactionDT": 86400,
-  "id_present": 1,
-  "C1": 4
-}
-```
-
-**Response**
-```json
-{
-  "transaction_id": "TXN-94210404",
-  "prediction": 1,
-  "prediction_label": "Fraud",
-  "fraud_probability": 0.9077,
-  "risk_score": 91,
-  "risk_level": "HIGH",
-  "model_used": "XGBoost"
-}
-```
+- Dashboard: `http://localhost:5173`

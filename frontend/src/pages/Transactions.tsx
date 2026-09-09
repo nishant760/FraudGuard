@@ -5,6 +5,7 @@ import RiskBadge from '../components/ui/RiskBadge';
 import GlowingCard from '../components/ui/GlowingCard';
 import KineticTitle from '../components/ui/KineticTitle';
 import HoldExpandModal from '../components/ui/HoldExpandModal';
+import { useStream } from '../context/StreamContext';
 import {
   RefreshCw,
   Search,
@@ -25,10 +26,16 @@ const PRODUCT_LABELS: Record<string, string> = {
   C: 'Cash / ATM Withdrawal',
   S: 'Services',
   R: 'Retail / In-Store',
+  TRANSFER: 'Wire Transfer (Live Stream)',
+  CASH_OUT: 'Cash Out / ATM (Live Stream)',
+  PAYMENT: 'Merchant Payment (Live Stream)',
+  CASH_IN: 'Cash Deposit (Live Stream)',
+  DEBIT: 'Direct Debit (Live Stream)',
 };
 
 export default function Transactions() {
-  const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
+  const { transactions: streamTxns } = useStream();
+  const [dbTransactions, setDbTransactions] = useState<TransactionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [holdingTx, setHoldingTx] = useState<TransactionHistoryItem | null>(null);
@@ -49,7 +56,7 @@ export default function Transactions() {
     setError(null);
     try {
       const data = await getTransactions();
-      setTransactions(data);
+      setDbTransactions(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
@@ -63,9 +70,35 @@ export default function Transactions() {
     return () => clearInterval(interval);
   }, []);
 
+  // Merge DB transactions with live stream transactions
+  const combinedTransactions = useMemo(() => {
+    const streamMapped: TransactionHistoryItem[] = streamTxns.map((st) => ({
+      transaction_id: st.txn_id,
+      transaction_amount: st.amount,
+      ProductCD: st.type,
+      card4: st.type === 'TRANSFER' || st.type === 'CASH_OUT' ? 'Wire Transfer' : 'Mobile Pay',
+      card6: st.nameOrig.startsWith('C') ? 'Customer Acct' : 'Merchant Acct',
+      prediction: st.is_fraud_predicted,
+      prediction_label: st.is_fraud_predicted === 1 ? 'Fraud' : 'Legitimate',
+      fraud_probability: st.fraud_probability,
+      risk_score: st.risk_score,
+      risk_level: st.risk_level,
+      model_used: 'PaySim XGBoost (Live Stream)',
+      created_at: new Date().toISOString(),
+    }));
+
+    const seen = new Set<string>();
+    const all = [...streamMapped, ...dbTransactions];
+    return all.filter((tx) => {
+      if (seen.has(tx.transaction_id)) return false;
+      seen.add(tx.transaction_id);
+      return true;
+    });
+  }, [streamTxns, dbTransactions]);
+
   // Filtered & Sorted Data
   const filteredData = useMemo(() => {
-    return transactions.filter((t) => {
+    return combinedTransactions.filter((t) => {
       if (riskFilter !== 'ALL' && t.risk_level.toUpperCase() !== riskFilter.toUpperCase()) {
         return false;
       }
@@ -82,7 +115,7 @@ export default function Transactions() {
       }
       return true;
     });
-  }, [transactions, riskFilter, predFilter, searchQuery]);
+  }, [combinedTransactions, riskFilter, predFilter, searchQuery]);
 
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
@@ -241,7 +274,7 @@ export default function Transactions() {
               </tr>
             </thead>
             <tbody>
-              {loading && transactions.length === 0 ? (
+              {loading && combinedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
                     <div className="empty-state" style={{ padding: '60px 20px' }}>
@@ -257,8 +290,8 @@ export default function Transactions() {
                       <Database className="empty-state-icon" />
                       <div className="empty-state-title">No transactions found</div>
                       <div className="empty-state-sub">
-                        {transactions.length === 0
-                          ? 'Run your first evaluation in the Transaction Assessment tab to populate audit records.'
+                        {combinedTransactions.length === 0
+                          ? 'Run your first evaluation or start the live stream to populate audit records.'
                           : 'No transactions match the selected filters.'}
                       </div>
                     </div>

@@ -22,12 +22,13 @@ def get_transactions(
 ):
     query = db.query(Transaction)
 
-    if risk_level:
-        query = query.filter(Transaction.risk_level.ilike(risk_level))
-    if prediction is not None:
+    if isinstance(risk_level, str) and risk_level.strip():
+        query = query.filter(Transaction.risk_level.ilike(risk_level.strip()))
+    if isinstance(prediction, int):
         query = query.filter(Transaction.prediction == prediction)
 
-    transactions = query.order_by(Transaction.created_at.desc()).limit(limit).all()
+    limit_val = limit if isinstance(limit, int) else 50
+    transactions = query.order_by(Transaction.created_at.desc()).limit(limit_val).all()
     # map product_category to ProductCD for frontend compatibility
     for t in transactions:
         t.ProductCD = t.product_category

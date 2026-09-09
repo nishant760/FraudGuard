@@ -49,6 +49,37 @@ class TransactionPredictRequest(BaseModel):
     )
 
 
+class ShapContribution(BaseModel):
+    feature: str
+    display_name: str
+    category: str
+    raw_value: Optional[str] = ""
+    shap_value: float
+    impact_pct: float
+    direction: str  # 'RISK_INCREASING' | 'RISK_DECREASING'
+    description: str
+
+
+class ShapExplanation(BaseModel):
+    base_value: float
+    contributions: List[ShapContribution]
+    top_risk_drivers: List[str]
+    top_safe_drivers: List[str]
+
+
+class ExplanationFactor(BaseModel):
+    feature: str
+    direction: str
+    relative_impact: float
+
+
+class Explanation(BaseModel):
+    available: bool
+    top_risk_factors: Optional[List[ExplanationFactor]] = None
+    top_protective_factors: Optional[List[ExplanationFactor]] = None
+    error: Optional[str] = None
+
+
 class TransactionPredictResponse(BaseModel):
     """Schema for POST /predict response payload."""
     transaction_id: str
@@ -58,6 +89,8 @@ class TransactionPredictResponse(BaseModel):
     risk_score: int
     risk_level: str
     model_used: str
+    explanation: Optional[Explanation] = None
+    shap_explanation: Optional[ShapExplanation] = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -150,3 +183,17 @@ class RiskDistributionResponse(BaseModel):
             }
         }
     )
+
+
+class GlobalShapItem(BaseModel):
+    feature: str
+    display_name: str
+    category: str
+    importance_score: float
+    importance_pct: float
+
+
+class GlobalShapResponse(BaseModel):
+    """Schema for GET /analytics/global-shap response."""
+    features: List[GlobalShapItem]
+

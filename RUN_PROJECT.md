@@ -1,92 +1,91 @@
-# How to Run the Fraud Detection Project
+# How to Run FraudGuard-AI (Complete Guide)
 
-Welcome! This guide explains exactly how to start and test the **FraudGuard AI: Real-Time Machine Learning Fraud Detection and Risk Intelligence Platform**.
+This guide covers both modes of FraudGuard-AI:
+1. **Real-Time Streaming Engine (Kafka + PaySim ML)**
+2. **Interactive Web Dashboard & FastAPI Backend**
 
-## 1. Project Structure
-- `ml/`: Contains the trained XGBoost model and preprocessing pipeline.
-- `backend/`: A FastAPI Python server that connects to the ML model and a SQLite database.
-- `frontend/`: A React + Vite user interface.
+---
 
-## 2. Prerequisites
-Ensure you have the following installed on your MacBook (Apple Silicon):
+## Prerequisites
 - **Python 3.10+**
-- **Node.js 20+** and **npm**
-- **libomp** (required by XGBoost on macOS). You can install this via Homebrew:
+- **Docker Desktop** (for Apache Kafka)
+- **Node.js 20+ & npm** (for React Frontend)
+- **libomp** (on macOS for XGBoost):
   ```bash
   HOMEBREW_NO_AUTO_UPDATE=1 brew install libomp
   ```
 
 ---
 
-## 3. How to Start the Project
+## Mode 1: Real-Time Streaming Pipeline (Kafka + PaySim)
 
-### Start the Backend
-1. Open **Terminal** and navigate to the backend folder:
-   ```bash
-   cd "path/to/major project/backend"
-   ```
-2. Activate the virtual environment:
-   ```bash
-   source venv/bin/activate
-   ```
-   *(If `venv` doesn't exist, create it: `python3 -m venv venv` and install dependencies: `pip install -r requirements.txt`)*
-3. Start the FastAPI server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+Follow these steps to run the complete real-time streaming fraud detection system:
 
-### Start the Frontend
-1. Open a **NEW Terminal window**.
-2. Navigate to the frontend folder:
-   ```bash
-   cd "path/to/major project/frontend"
-   ```
-3. Start the React server:
-   ```bash
-   npm run dev
-   ```
+### 1. Start Apache Kafka
+In your terminal, navigate to the project root and start Kafka in KRaft mode:
+```bash
+docker compose up -d
+```
+*(This automatically boots Kafka and provisions the `transactions` and `fraud_alerts` topics).*
 
-### Important URLs
-- **Frontend Dashboard:** http://localhost:5173
-- **Backend API Docs:** http://127.0.0.1:8000/docs
+### 2. Install Dependencies & Train the PaySim Model
+```bash
+cd streaming
+pip install -r requirements.txt
+python train.py
+```
+*(If you have the full Kaggle `paysim.csv` or `PS_20174392719_1491204439457_log.csv`, place it in `streaming/data/paysim.csv` or pass `--data path/to/paysim.csv`).*
 
----
+### 3. Open 3 Terminals to Run the Stream
 
-## 4. Demonstration Workflow
+#### Terminal 1 — Start the Alert Consumer
+```bash
+cd streaming
+python alert_consumer.py
+```
+*Listens on topic `fraud_alerts` and prints rich formatted warning boxes for flagged transactions.*
 
-Follow these exact steps during your university presentation:
+#### Terminal 2 — Start the Scoring Consumer
+```bash
+cd streaming
+python consumer.py
+```
+*Subscribes to `transactions`, computes rolling window velocity features, scores in real time with the ML model, logs to SQLite (`predictions.db`), and forwards high-risk events to `fraud_alerts`.*
 
-1. **Welcome Screen:** Open http://localhost:5173. You will see a polished welcome screen. Click "Enter Dashboard".
-2. **Normal Transaction:** On the Real-Time Assessment page, click **Reset** (which fills in legitimate test data) and click **Run Assessment**.
-3. **Fraud Transaction:** Click the **High Risk Preset** button, then click **Run Assessment**.
-4. **Transaction History:** Navigate to the Transaction History tab. Show the professor that both transactions were recorded in the database.
-5. **Analytics:** Navigate to Analytics & Models. Show that the total counts and pie chart reflect the real data just processed.
+#### Terminal 3 — Start the Transaction Producer
+```bash
+cd streaming
+python producer.py
+```
+*Reads PaySim chronologically by `step`, filters for `TRANSFER` and `CASH_OUT`, and streams transactions as JSON to Kafka with simulated live delay.*
 
 ---
 
-## 5. Understanding the System
+## Mode 2: Interactive Web Dashboard & API
 
-### What the Input Fields Mean
-The inputs exactly match the 11 required features used to engineer the final 14 ML features:
-- **TransactionAmt:** The dollar amount of the transaction.
-- **ProductCD:** Dataset-defined product category (W, H, C, S, R).
-- **card1, card2, card4, card6:** Raw card network and type information.
-- **addr1:** Billing region.
-- **C1, C5:** Frequency/count metrics from the dataset.
-- **P_emaildomain:** Purchaser email domain (e.g., gmail, protonmail).
-- **id_present:** Whether an identity record was found during the transaction.
+### 1. Start the FastAPI Backend
+```bash
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+- API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### What the Output Means
-- **Fraud Probability:** The raw probability (0.0 to 1.0) output by the XGBoost model.
-- **Risk Score:** A normalized 0–100 scale derived from the probability.
-- **Risk Level:** LOW (0–30), MEDIUM (31–70), or HIGH (71–100).
-- **Verdict:** Legitimate (0) or Fraud (1).
+### 2. Start the React Frontend Dashboard
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- Dashboard: [http://localhost:5173](http://localhost:5173)
 
-### How "Refresh Stream" Works
-The "Refresh Stream" button in the Transaction History tab manually triggers an API request to the backend SQLite database to fetch the most recently evaluated transactions.
+---
 
-### How Analytics is Calculated
-Analytics are mathematically derived from real stored transactions:
-- **Fraud Rate:** `(Total Fraud Predictions / Total Transactions) × 100`
-- **Average Transaction:** The average monetary amount of all stored transactions.
-- **Risk Distribution:** A live aggregate of all LOW, MEDIUM, and HIGH risk levels stored in the database.
+## Summary of Topics & Data Stores
+- **Kafka Topics**:
+  - `transactions`: Live incoming transaction feed published by `producer.py`.
+  - `fraud_alerts`: High-risk flagged fraud events published by `consumer.py`.
+- **Databases & Logs**:
+  - `streaming/predictions.db`: SQLite database storing every scored transaction, probabilities, risk levels, and latency.
+  - `streaming/predictions.log`: Structured JSON log file of predictions.
+  - `backend/fraud_detection.db`: SQLite database used by the FastAPI web service.

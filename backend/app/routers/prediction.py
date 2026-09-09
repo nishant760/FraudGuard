@@ -46,7 +46,7 @@ def predict(
         db.commit()
         db.refresh(db_transaction)
 
-        # Step 5: Return structured response
+        # Step 5: Return structured response with SHAP explanation
         return {
             "transaction_id": transaction_id,
             "prediction": result["prediction"],
@@ -54,8 +54,11 @@ def predict(
             "fraud_probability": result["fraud_probability"],
             "risk_score": result["risk_score"],
             "risk_level": result["risk_level"],
-            "model_used": result["model_used"]
+            "model_used": result["model_used"],
+            "explanation": result.get("explanation"),
+            "shap_explanation": result.get("shap_explanation"),
         }
+
 
     except Exception as e:
         db.rollback()

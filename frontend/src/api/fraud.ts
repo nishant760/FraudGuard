@@ -5,6 +5,7 @@ import type {
   TransactionHistoryItem,
   AnalyticsSummary,
   RiskDistributionResponse,
+  GlobalShapResponse,
 } from '../types';
 
 // POST /predict
@@ -44,8 +45,15 @@ export const getRiskDistribution = async (): Promise<RiskDistributionResponse> =
   return data;
 };
 
+// GET /analytics/global-shap
+export const getGlobalShapImportance = async (): Promise<GlobalShapResponse> => {
+  const { data } = await apiClient.get<GlobalShapResponse>('/analytics/global-shap');
+  return data;
+};
+
 // GET /health
 export const checkHealth = async (): Promise<{ status: string }> => {
   const { data } = await apiClient.get<{ status: string }>('/health');
   return data;
 };
+

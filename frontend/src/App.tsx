@@ -3,12 +3,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import WelcomeScreen from './components/WelcomeScreen';
+import KafkaStream from './pages/KafkaStream';
+import SecurityCenter from './pages/SecurityCenter';
+import OtpQueue from './pages/OtpQueue';
 import Assessment from './pages/Assessment';
 import Analytics from './pages/Analytics';
 import Transactions from './pages/Transactions';
 import MosaicWaves from './components/ui/MosaicWaves';
-// import BlinkingDots from './components/ui/BlinkingDots';
+import { StreamProvider } from './context/StreamContext';
+// import BlinkingDots from './components/ui/BlinkingDots'
 import type { RiskLevel } from './lib/dotsEvent';
+
 
 const DEFAULT_DOTS_COLOR = '#10b981'; // Original emerald green
 const RISK_DOTS_COLORS: Record<RiskLevel, string> = {
@@ -77,21 +82,26 @@ export default function App() {
       {!hasEntered ? (
         <WelcomeScreen onEnter={() => setHasEntered(true)} />
       ) : (
-        <BrowserRouter>
-          {/* Main Layout Container */}
-          <div className="app-layout">
-            <Sidebar />
-            <div className="app-main">
-              <TopBar />
-              <Routes>
-                <Route path="/" element={<Assessment />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/transactions" element={<Transactions />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+        <StreamProvider>
+          <BrowserRouter>
+            {/* Main Layout Container */}
+            <div className="app-layout">
+              <Sidebar />
+              <div className="app-main">
+                <TopBar />
+                <Routes>
+                  <Route path="/" element={<KafkaStream />} />
+                  <Route path="/otp-queue" element={<OtpQueue />} />
+                  <Route path="/security" element={<SecurityCenter />} />
+                  <Route path="/assessment" element={<Assessment />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
             </div>
-          </div>
-        </BrowserRouter>
+          </BrowserRouter>
+        </StreamProvider>
       )}
     </>
   );

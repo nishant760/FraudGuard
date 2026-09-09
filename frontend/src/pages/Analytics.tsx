@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip
 } from 'recharts';
-import { getAnalyticsSummary, getRiskDistribution } from '../api/fraud';
-import type { AnalyticsSummary, RiskDistributionResponse } from '../types';
+import { getAnalyticsSummary, getRiskDistribution, getGlobalShapImportance } from '../api/fraud';
+import type { AnalyticsSummary, RiskDistributionResponse, GlobalShapItem } from '../types';
 import MetricCard from '../components/ui/MetricCard';
 import ModalCard from '../components/ui/ModalCard';
 import KineticTitle from '../components/ui/KineticTitle';
-import { Activity, AlertTriangle, CheckCircle2, TrendingUp, DollarSign } from 'lucide-react';
+import { useStream } from '../context/StreamContext';
+import { Activity, AlertTriangle, CheckCircle2, TrendingUp, DollarSign, Sparkles } from 'lucide-react';
+
 
 const RISK_COLORS: Record<string, string> = {
   LOW: '#10b981',
@@ -23,96 +25,179 @@ const CUSTOM_TOOLTIP_STYLE = {
   fontSize: 13,
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  'Amount & Volume': '#6366f1',
+  'Frequency & Velocity': '#ec4899',
+  'Identity & Device': '#10b981',
+  'Payment Method': '#f59e0b',
+  'Transaction Type': '#8b5cf6',
+  'Temporal Behavior': '#06b6d4',
+  'Geographic & Billing': '#14b8a6',
+  'Identity & Communication': '#3b82f6',
+  'General': '#64748b',
+};
+
 export default function Analytics() {
+  const {
+    transactions: streamTxns,
+    totalCount: streamTotal,
+    fraudCount: streamFraud,
+    totalVolume: streamVol,
+    isStreaming,
+    lastLatency,
+  } = useStream();
+
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [distribution, setDistribution] = useState<RiskDistributionResponse | null>(null);
+  const [globalShap, setGlobalShap] = useState<GlobalShapItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAnalyticsSummary(), getRiskDistribution()])
-      .then(([s, d]) => { setSummary(s); setDistribution(d); })
+    Promise.all([getAnalyticsSummary(), getRiskDistribution(), getGlobalShapImportance()])
+      .then(([s, d, g]) => {
+        setSummary(s);
+        setDistribution(d);
+        setGlobalShap(g.features || []);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const pieData = distribution?.distribution.map((d) => ({
-    name: d.risk_level,
-    value: d.count,
-    pct: d.percentage,
-  })) ?? [];
+  // Compute live stream risk distribution
+  const streamDistribution = useMemo(() => {
+    let low = 0;
+    let med = 0;
+    let high = 0;
+    for (const t of streamTxns) {
+      if (t.risk_level === 'LOW') low++;
+      else if (t.risk_level === 'MEDIUM') med++;
+      else if (t.risk_level === 'HIGH') high++;
+    }
+    return { low, med, high };
+  }, [streamTxns]);
 
-  const totalRiskCount = pieData.reduce((acc, d) => acc + d.value, 0);
+  // Combined metrics (Database + Live Kafka Stream)
+  const totalTransactions = (summary?.total_transactions ?? 0) + streamTotal;
+  const totalFraud = (summary?.total_fraud ?? 0) + streamFraud;
+  const totalLegit = (summary?.total_legitimate ?? 0) + (streamTotal - streamFraud);
+  const fraudRate = totalTransactions > 0 ? (totalFraud / totalTransactions) * 100 : 0;
+  const totalAmountSum = ((summary?.avg_transaction_amount ?? 0) * (summary?.total_transactions ?? 0)) + streamVol;
+  const avgAmount = totalTransactions > 0 ? totalAmountSum / totalTransactions : 0;
+
+  // Combined Risk distribution
+  const dbLow = distribution?.distribution.find((d) => d.risk_level === 'LOW')?.count ?? 0;
+  const dbMed = distribution?.distribution.find((d) => d.risk_level === 'MEDIUM')?.count ?? 0;
+  const dbHigh = distribution?.distribution.find((d) => d.risk_level === 'HIGH')?.count ?? 0;
+
+  const combinedLow = dbLow + streamDistribution.low;
+  const combinedMed = dbMed + streamDistribution.med;
+  const combinedHigh = dbHigh + streamDistribution.high;
+  const combinedTotalRisk = combinedLow + combinedMed + combinedHigh;
+
+  const pieData = useMemo(() => {
+    if (combinedTotalRisk === 0) return [];
+    return [
+      { name: 'LOW', value: combinedLow, pct: (combinedLow / combinedTotalRisk) * 100 },
+      { name: 'MEDIUM', value: combinedMed, pct: (combinedMed / combinedTotalRisk) * 100 },
+      { name: 'HIGH', value: combinedHigh, pct: (combinedHigh / combinedTotalRisk) * 100 },
+    ];
+  }, [combinedLow, combinedMed, combinedHigh, combinedTotalRisk]);
 
   return (
     <div className="page-content">
       <KineticTitle
-        title="Transaction Analytics"
-        subtitle="Evaluated transaction metrics from the XGBoost ML pipeline."
+        title="Transaction Analytics & ML Intelligence"
+        subtitle="Consolidated real-time telemetry from IEEE-CIS ML pipeline and live Kafka PaySim event stream."
       />
 
-      <div style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-        Application Transaction Summary
+      {/* Live Stream Status Indicator */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '10px 18px',
+        borderRadius: 10,
+        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%)',
+        border: '1px solid rgba(99, 102, 241, 0.2)',
+        marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{
+            display: 'inline-block',
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: isStreaming ? '#10b981' : '#f59e0b',
+            boxShadow: isStreaming ? '0 0 8px #10b981' : 'none'
+          }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            Kafka Streaming Pipeline: {isStreaming ? 'Active (Continuous Ingestion)' : 'Paused'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
+          <span><strong>{streamTotal.toLocaleString()}</strong> live events ingested</span>
+          <span>Avg Latency: <strong>{lastLatency.toFixed(1)}ms</strong></span>
+        </div>
       </div>
-      {/* Summary Metric Cards with theme-matched subtle glows */}
-      <div className="metric-cards-grid mb-8">
+
+      {/* 5 KPI Metric Cards */}
+      <div className="metric-cards-grid mb-6">
         <MetricCard
-          value={loading ? '—' : (summary?.total_transactions ?? 0).toLocaleString()}
-          label="Total Transactions"
+          label="Total Transactions Analyzed"
+          value={totalTransactions.toLocaleString()}
           icon={<Activity size={18} color="#4f46e5" />}
-          iconBg="#eef2ff"
-          fromColor="rgba(79, 70, 229, 0.45)"
-          viaColor="rgba(99, 102, 241, 0.3)"
-          toColor="rgba(129, 140, 248, 0.45)"
+          iconBg="rgba(79, 70, 229, 0.12)"
+          suffix="evaluated"
+          valueColor="#4f46e5"
+          fromColor="rgba(79, 70, 229, 0.35)"
         />
         <MetricCard
-          value={loading ? '—' : (summary?.total_fraud ?? 0).toLocaleString()}
-          label="Fraud Detected"
+          label="Fraud Detected & Blocked"
+          value={totalFraud.toLocaleString()}
           icon={<AlertTriangle size={18} color="#ef4444" />}
-          iconBg="#fff1f2"
-          valueColor="var(--risk-high-accent)"
-          fromColor="rgba(239, 68, 68, 0.45)"
-          viaColor="rgba(244, 63, 94, 0.3)"
-          toColor="rgba(251, 113, 133, 0.45)"
+          iconBg="rgba(239, 68, 68, 0.12)"
+          suffix="flagged"
+          valueColor="#ef4444"
+          fromColor="rgba(239, 68, 68, 0.35)"
         />
         <MetricCard
-          value={loading ? '—' : (summary?.total_legitimate ?? 0).toLocaleString()}
-          label="Legitimate"
+          label="Legitimate / Auto-Cleared"
+          value={totalLegit.toLocaleString()}
           icon={<CheckCircle2 size={18} color="#10b981" />}
-          iconBg="#ecfdf5"
-          valueColor="var(--risk-low-accent)"
-          fromColor="rgba(16, 185, 129, 0.45)"
-          viaColor="rgba(5, 150, 105, 0.3)"
-          toColor="rgba(52, 211, 153, 0.45)"
+          iconBg="rgba(16, 185, 129, 0.12)"
+          suffix="cleared"
+          valueColor="#10b981"
+          fromColor="rgba(16, 185, 129, 0.35)"
         />
         <MetricCard
-          value={loading ? '—' : `${((summary?.fraud_rate ?? 0) * 100).toFixed(1)}`}
-          label="Fraud Rate"
-          icon={<TrendingUp size={18} color="#f59e0b" />}
-          iconBg="#fffbeb"
-          suffix="%"
-          fromColor="rgba(245, 158, 11, 0.45)"
-          viaColor="rgba(217, 119, 6, 0.3)"
-          toColor="rgba(251, 191, 36, 0.45)"
+          label="Portfolio Fraud Rate"
+          value={`${fraudRate.toFixed(2)}%`}
+          icon={<TrendingUp size={18} color="#ec4899" />}
+          iconBg="rgba(236, 72, 153, 0.12)"
+          suffix="overall"
+          valueColor="#ec4899"
+          fromColor="rgba(236, 72, 153, 0.35)"
         />
         <MetricCard
-          value={loading ? '—' : `$${(summary?.avg_transaction_amount ?? 0).toFixed(0)}`}
-          label="Avg. Transaction"
-          icon={<DollarSign size={18} color="#4f46e5" />}
-          iconBg="#eef2ff"
-          fromColor="rgba(59, 130, 246, 0.4)"
-          viaColor="rgba(79, 70, 229, 0.3)"
-          toColor="rgba(99, 102, 241, 0.4)"
+          label="Avg Transaction Amount"
+          value={`$${avgAmount.toFixed(2)}`}
+          icon={<DollarSign size={18} color="#f59e0b" />}
+          iconBg="rgba(245, 158, 11, 0.12)"
+          suffix="per txn"
+          valueColor="#f59e0b"
+          fromColor="rgba(245, 158, 11, 0.35)"
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="analytics-grid mb-8" style={{ gridTemplateColumns: '1fr 1fr' }}>        {/* Risk Distribution Donut with Expandable Modal Card */}
+      {/* Main Charts & Analytics Grid */}
+      <div className="analytics-grid" style={{ marginBottom: 24 }}>
+        {/* Risk Level Distribution Card */}
         <ModalCard
-          title="Risk Distribution"
-          subtitle="Evaluated transaction breakdown"
+          title="Consolidated Risk Distribution"
+          subtitle="Real-time multi-tier transaction risk segmentation"
           fromColor="rgba(99, 102, 241, 0.35)"
           viaColor="rgba(168, 85, 247, 0.25)"
-          toColor="rgba(59, 130, 246, 0.35)"
+          toColor="rgba(236, 72, 153, 0.35)"
           modalContent={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 32, justifyContent: 'center', padding: '10px 0' }}>
@@ -149,37 +234,6 @@ export default function Analytics() {
                   ))}
                 </div>
               </div>
-
-              {/* Deep Dive Breakdown Table */}
-              <div>
-                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'var(--text-secondary)' }}>Risk Policy &amp; Automated Actions</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 2fr', padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
-                    <span>Tier</span>
-                    <span>Risk Score</span>
-                    <span>Volume</span>
-                    <span>System Policy</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 2fr', padding: '10px 12px', borderBottom: '1px solid var(--border-base)', fontSize: 13, alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--risk-low-text)' }}>LOW</span>
-                    <span>0 – 30</span>
-                    <span>{distribution?.distribution.find(d => d.risk_level === 'LOW')?.count ?? 0}</span>
-                    <span style={{ color: 'var(--text-tertiary)' }}>Auto-Approve / Instant Settlement</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 2fr', padding: '10px 12px', borderBottom: '1px solid var(--border-base)', fontSize: 13, alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--risk-medium-text)' }}>MEDIUM</span>
-                    <span>31 – 70</span>
-                    <span>{distribution?.distribution.find(d => d.risk_level === 'MEDIUM')?.count ?? 0}</span>
-                    <span style={{ color: 'var(--text-tertiary)' }}>Step-Up 2FA / Manual Review Queue</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 2fr', padding: '10px 12px', fontSize: 13, alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--risk-high-text)' }}>HIGH</span>
-                    <span>71 – 100</span>
-                    <span>{distribution?.distribution.find(d => d.risk_level === 'HIGH')?.count ?? 0}</span>
-                    <span style={{ color: 'var(--risk-high-accent)', fontWeight: 600 }}>Immediate Decline &amp; Freeze Card</span>
-                  </div>
-                </div>
-              </div>
             </div>
           }
         >
@@ -188,10 +242,9 @@ export default function Analytics() {
               <div className="loading-spinner dark" style={{ margin: '0 auto 12px' }} />
               <div className="empty-state-title">Loading distribution...</div>
             </div>
-          ) : totalRiskCount === 0 ? (
+          ) : combinedTotalRisk === 0 ? (
             <div className="empty-state" style={{ padding: '40px 20px' }}>
               <div className="empty-state-title" style={{ color: 'var(--text-muted)' }}>No transaction data available yet.</div>
-              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 8 }}>Run an assessment to generate analytics.</div>
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, justifyContent: 'center', padding: '20px 0' }}>
@@ -230,60 +283,99 @@ export default function Analytics() {
             </div>
           )}
         </ModalCard>
+      </div>
 
-        {/* Model Info Card with Expandable Modal */}
-        <ModalCard
-          title="ML Pipeline Overview"
-          subtitle="Architecture details"
-          fromColor="rgba(59, 130, 246, 0.35)"
-          viaColor="rgba(99, 102, 241, 0.25)"
-          toColor="rgba(16, 185, 129, 0.35)"
-          modalContent={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ background: 'var(--primary-50)', padding: '14px 18px', borderRadius: 12, border: '1px solid var(--primary-100)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary-700)', marginBottom: 4 }}>IEEE-CIS Fraud Detection Pipeline</div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                  State-of-the-art gradient boosted tree ensemble trained to evaluate real-time card-not-present (CNP) and electronic payment transaction risk with sub-5ms latency.
-                </div>
-              </div>
-
-              <div>
-                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'var(--text-secondary)' }}>Architecture Specifications</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { label: 'Dataset Source', value: 'IEEE-CIS Fraud Detection Benchmark (590,000+ Transactions)' },
-                    { label: 'Model Algorithm', value: 'XGBoost (eXtreme Gradient Boosting Classifier)' },
-                    { label: 'Feature Engineering', value: '11 Input Features Engineered into 14 ML Predictors' },
-                    { label: 'Preprocessor Pipeline', value: 'ColumnTransformer (OneHotEncoder + StandardScaler + Log Transform)' },
-                    { label: 'Inference Latency', value: '< 5ms per transaction prediction' },
-                    { label: 'Persistence Store', value: 'SQLite / SQLAlchemy Audit Log & Analytics DB' },
-                  ].map(({ label, value }) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 8, borderBottom: '1px solid var(--border-base)' }}>
-                      <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      {/* ── Full Width Global SHAP Feature Importance & Interpretability Matrix ── */}
+      <div className="card" style={{ padding: 24, width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <Sparkles size={18} color="#6366f1" />
+              <span>Global SHAP Feature Importance &amp; Model Interpretability Matrix</span>
             </div>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
-            {[
-              { label: 'Dataset', value: 'IEEE-CIS Fraud Detection Dataset' },
-              { label: 'Model', value: 'XGBoost Classifier' },
-              { label: 'Input Processing', value: 'Preprocessed Transaction Features' },
-              { label: 'Features Used', value: '14 Features Used for Prediction' },
-              { label: 'Output', value: 'Fraud Prediction, Probability, and Risk Level' },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 10, borderBottom: '1px solid var(--border-base)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right', maxWidth: '55%' }}>{value}</span>
-              </div>
-            ))}
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+              Relative feature impact ranking across all decision splits in the trained XGBoost model (TreeSHAP Gain metric).
+            </div>
           </div>
-        </ModalCard>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366f1' }} />
+            <span>Exact TreeSHAP Attribution</span>
+          </div>
+        </div>
+
+        {/* Global SHAP Ranking Bar Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 14 }}>
+          {globalShap.slice(0, 10).map((item, idx) => {
+            const catColor = CATEGORY_COLORS[item.category] || '#6366f1';
+            const widthPct = Math.min(100, Math.max(8, item.importance_pct * 4));
+
+            return (
+              <div
+                key={item.feature}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-base)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: '#ffffff',
+                      background: '#4f46e5',
+                      borderRadius: 4,
+                      padding: '1px 6px',
+                    }}>
+                      #{idx + 1}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {item.display_name}
+                    </span>
+                  </div>
+
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      background: `${catColor}18`,
+                      color: catColor,
+                      border: `1px solid ${catColor}33`,
+                    }}
+                  >
+                    {item.category}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: 6, background: 'var(--bg-card)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${widthPct}%`,
+                      height: '100%',
+                      background: `linear-gradient(90deg, ${catColor}, #4f46e5)`,
+                      borderRadius: 3,
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span>Importance Weight: <strong style={{ color: 'var(--text-primary)' }}>{item.importance_pct}%</strong></span>
+                  <span>Gain: <strong>{item.importance_score.toLocaleString()}</strong></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
