@@ -1,513 +1,694 @@
-# 🛡️ FraudGuard-AI: Enterprise Financial Fraud Detection & Real-Time Risk Intelligence Platform
+# 🛡️ FraudGuard-AI
 
-[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg)](https://www.typescriptlang.org/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-2.1-FF6600.svg)](https://xgboost.readthedocs.io/)
-[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3.7%20(KRaft)-231F20.svg)](https://kafka.apache.org/)
-[![SHAP](https://img.shields.io/badge/Explainability-TreeSHAP-8A2BE2.svg)](https://shap.readthedocs.io/)
+## Financial Fraud Detection & Real-Time Risk Intelligence Platform
 
-> **FraudGuard-AI** is a production-grade, full-stack Financial Fraud Detection and Risk Intelligence Platform. It pairs dual-engine Machine Learning pipelines (IEEE-CIS Card-Not-Present Fraud & PaySim Mobile Money Streaming) with **Native TreeSHAP Explainability (XAI)**, **Adaptive Risk-Based 2FA Multi-Factor Authentication**, and a high-throughput **Apache Kafka Streaming Architecture**.
+**FraudGuard-AI** is a full-stack financial fraud detection and risk intelligence platform designed to identify suspicious transactions, evaluate financial risk in real time, and provide explainable insights behind every prediction.
 
----
+The platform combines **Machine Learning, Explainable AI, Apache Kafka, FastAPI, React, SQLite, and adaptive multi-factor authentication** into a unified fraud monitoring system.
 
-## 📑 Table of Contents
-1. [Platform Architecture & System Design](#-platform-architecture--system-design)
-2. [Key Highlights & Capabilities](#-key-highlights--capabilities)
-3. [Dual-Engine Machine Learning Architecture](#-dual-engine-machine-learning-architecture)
-4. [Explainable AI (TreeSHAP) Integration](#-explainable-ai-treeshap-integration)
-5. [Adaptive 2FA & Multi-Factor Security System](#-adaptive-2fa--multi-factor-security-system)
-6. [Apache Kafka Real-Time Streaming Pipeline](#-apache-kafka-real-time-streaming-pipeline)
-7. [Repository File Structure](#-repository-file-structure)
-8. [Step-by-Step Installation & Run Guide](#-step-by-step-installation--run-guide)
-9. [REST API Endpoints Reference](#-rest-api-endpoints-reference)
-10. [Frontend Dashboard Modules](#-frontend-dashboard-modules)
-11. [Tech Stack](#-tech-stack)
+It supports two complementary transaction-processing pipelines:
+
+* **IEEE-CIS Fraud Detection** for card-not-present and e-commerce transactions
+* **PaySim** for high-volume mobile-money transaction streaming
 
 ---
 
-## 🏛️ Platform Architecture & System Design
+## 🚀 Key Features
 
-```
-                                  ┌────────────────────────────────────────────────────────┐
-                                  │             Incoming Transaction Sources               │
-                                  │  • Web UI Manual Assessment / External REST API        │
-                                  │  • High-Throughput Event Streams (PaySim Mobile Data)  │
-                                  └───────────────────────────┬────────────────────────────┘
-                                                              │
-                                     ┌────────────────────────┴────────────────────────┐
-                                     ▼                                                 ▼
-                  ┌──────────────────────────────────────┐          ┌──────────────────────────────────────┐
-                  │    IEEE-CIS Batch Assessment API     │          │    Apache Kafka Streaming Broker     │
-                  │  (FastAPI Server : Port 8000)        │          │  (Port 9092 - KRaft Mode)            │
-                  └──────────────────┬───────────────────┘          └──────────────────┬───────────────────┘
-                                     │                                                 │
-                                     │                                                 ▼
-                                     │                              ┌──────────────────────────────────────┐
-                                     │                              │      Kafka Producer (producer.py)    │
-                                     │                              │  • Time-ordered event serialization  │
-                                     │                              │  • Topic: 'transactions'             │
-                                     │                              └──────────────────┬───────────────────┘
-                                     │                                                 │
-                                     │                                                 ▼
-                                     │                              ┌──────────────────────────────────────┐
-                                     │                              │      Kafka Consumer (consumer.py)    │
-                                     │                              │  • 24-step sliding window velocity   │
-                                     │                              │  • Balance discrepancy calculation   │
-                                     │                              └──────────────────┬───────────────────┘
-                                     │                                                 │
-                                     ▼                                                 ▼
-                  ┌────────────────────────────────────────────────────────────────────────────────────────┐
-                  │                     Dual-Engine Machine Learning & Explainability Layer                │
-                  │  • Feature Engineering Pipeline (amt_log, tx_hour, C1/C5 count, domain coarsening)    │
-                  │  • XGBoost Classification Inference Engine                                             │
-                  │  • Native TreeSHAP Exact Additive Attribution Engine (sub-millisecond force vectors)   │
-                  └──────────────────────────────────────────┬─────────────────────────────────────────────┘
-                                                             │
-                                                             ▼
-                  ┌────────────────────────────────────────────────────────────────────────────────────────┐
-                  │                        Adaptive Risk Policy & Tier Decisioning                         │
-                  │  • LOW RISK (0–30)     → Zero-Friction Auto-Approval & Instant Clearance               │
-                  │  • MEDIUM RISK (31–70) → Step-Up 2FA Security Challenge & OTP Dispatch                 │
-                  │  • HIGH RISK (71–100)  → Critical 2FA Security Challenge & Account Freeze Protection   │
-                  └──────────────────────────────────────────┬─────────────────────────────────────────────┘
-                                                             │
-                                     ┌───────────────────────┴────────────────────────┐
-                                     ▼                                                ▼
-                  ┌─────────────────────────────────────┐          ┌──────────────────────────────────────┐
-                  │      Persistent Storage & Audit     │          │    2FA OTP Dispatch & Security Vault │
-                  │  • SQLite Database (predictions.db) │          │  • /security Real-time Passcode Log  │
-                  │  • Historical Telemetry & Analytics │          │  • Instant 1-Click Passcode Copy     │
-                  │  • Topic: 'fraud_alerts'            │          │  • Real-Time Interactive Resolution  │
-                  └──────────────────┬──────────────────┘          └──────────────────┬───────────────────┘
-                                     │                                                │
-                                     └────────────────────────┬───────────────────────┘
-                                                              │
-                                                              ▼
-                  ┌────────────────────────────────────────────────────────────────────────────────────────┐
-                  │                      Interactive Frontend Dashboard (React 19 + Vite)                  │
-                  │  • Real-Time Streaming Engine (/)      • 2FA & Security Center (/security)             │
-                  │  • Manual Assessment & XAI (/assessment) • Analytics & Model Telemetry (/analytics)   │
-                  │  • Historical Transaction Audit (/transactions)                                        │
-                  └────────────────────────────────────────────────────────────────────────────────────────┘
+### 🤖 Machine Learning Fraud Detection
+
+* XGBoost-based fraud classification
+* Separate batch and real-time streaming pipelines
+* Transaction-level fraud probability prediction
+* Continuous risk score from **0–100**
+* Risk categorization into **LOW, MEDIUM, and HIGH**
+
+### 🔍 Explainable AI
+
+FraudGuard-AI uses **TreeSHAP** to explain individual predictions.
+
+For every transaction, the system identifies:
+
+* Features increasing fraud risk
+* Features reducing fraud risk
+* Individual feature contribution values
+* Global model feature importance
+* Risk drivers and safety factors
+
+This makes the prediction process more transparent instead of treating the ML model as a black box.
+
+### ⚡ Real-Time Kafka Streaming
+
+The PaySim pipeline uses **Apache Kafka** for event-driven transaction processing.
+
+```text
+PaySim Dataset
+      │
+      ▼
+Kafka Producer
+      │
+      ▼
+transactions Topic
+      │
+      ▼
+Kafka Consumer
+      │
+      ├── Sliding Window Analysis
+      ├── Feature Engineering
+      ├── ML Prediction
+      └── Risk Scoring
+              │
+              ▼
+       ┌──────┴──────┐
+       ▼             ▼
+   SQLite DB    fraud_alerts
+                     │
+                     ▼
+              Alert Consumer
 ```
 
+The streaming pipeline includes:
+
+* Kafka Producer
+* Kafka Consumer
+* `transactions` topic
+* `fraud_alerts` topic
+* Stateful sliding-window tracking
+* Real-time fraud scoring
+* Fraud alert generation
+
+### 📊 Sliding-Window Behaviour Analysis
+
+FraudGuard-AI maintains a **24-step rolling transaction window** for account-level behavioural analysis.
+
+The system tracks:
+
+* Number of transactions
+* Total transaction amount
+* Average transaction amount
+* Transaction velocity
+* Balance discrepancies
+
+This helps identify abnormal transaction bursts and suspicious account behaviour.
+
+### 🔐 Adaptive Risk-Based 2FA
+
+Security actions are determined dynamically according to the calculated risk score.
+
+| Risk Level    |  Score | Security Action                                  |
+| ------------- | -----: | ------------------------------------------------ |
+| 🟢 **LOW**    |   0–30 | Automatic approval                               |
+| 🟡 **MEDIUM** |  31–70 | 6-digit OTP / 2FA verification                   |
+| 🔴 **HIGH**   | 71–100 | Critical verification and transaction protection |
+
+Medium- and high-risk transactions require additional verification before completion.
+
+### 📈 Interactive Risk Dashboard
+
+The React dashboard provides:
+
+* Real-time transaction monitoring
+* Manual transaction assessment
+* Risk-score visualization
+* SHAP explanations
+* Transaction history
+* Fraud analytics
+* Model telemetry
+* 2FA security monitoring
+* Risk distribution analysis
+
 ---
 
-## ⚡ Key Highlights & Capabilities
+# 🏗️ System Architecture
 
-- **Dual-Model ML Architecture**: Simultaneous support for e-commerce card-not-present transactions (IEEE-CIS) and high-velocity mobile money transfers (PaySim).
-- **Sub-Millisecond Explainable AI (TreeSHAP)**: Uses XGBoost's native TreeSHAP engine to calculate exact Shapley additive force contributions ($+$/$-$ risk values) with zero latency overhead.
-- **Adaptive 2FA Multi-Factor Authentication**: Dynamically requires 6-digit OTP challenges for Medium & High-risk transactions while allowing frictionless passage for Low-risk payments.
-- **Dedicated 2FA & Security Center (`/security`)**: Full-width, searchable OTP vault with instant copy-paste controls, real-time status filtering, and live transaction amounts.
-- **Event-Driven Apache Kafka Streaming (KRaft Mode)**: Containerized Kafka cluster running with producer, real-time scoring consumer, and instant fraud alerting topics.
-- **Synchronized Global State**: Background Kafka streaming continues across the entire app without interrupting state when navigating through tabs.
-- **Production-Ready REST API**: FastAPI backend with Pydantic v2 schemas, OpenAPI/Swagger interactive documentation, and SQLAlchemy database persistence.
+```text
+                         ┌─────────────────────────┐
+                         │   Transaction Sources   │
+                         │                         │
+                         │ Web UI / REST API       │
+                         │ PaySim Streaming Data   │
+                         └────────────┬────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    │                                   │
+                    ▼                                   ▼
+          ┌──────────────────┐                ┌──────────────────┐
+          │ FastAPI Backend  │                │  Kafka Producer  │
+          │ Batch Assessment │                │   PaySim Data    │
+          └────────┬─────────┘                └────────┬─────────┘
+                   │                                   │
+                   │                                   ▼
+                   │                         ┌──────────────────┐
+                   │                         │ Kafka Broker     │
+                   │                         │ KRaft Mode       │
+                   │                         └────────┬─────────┘
+                   │                                  │
+                   │                                  ▼
+                   │                         ┌──────────────────┐
+                   │                         │ Kafka Consumer   │
+                   │                         │                  │
+                   │                         │ Sliding Window  │
+                   │                         │ Feature Engine  │
+                   │                         │ ML Scoring      │
+                   │                         └────────┬─────────┘
+                   │                                  │
+                   └────────────────┬─────────────────┘
+                                    ▼
+                         ┌─────────────────────────┐
+                         │ ML & Explainability    │
+                         │                         │
+                         │ XGBoost                │
+                         │ TreeSHAP               │
+                         │ Risk Scoring           │
+                         └────────────┬────────────┘
+                                      │
+                                      ▼
+                         ┌─────────────────────────┐
+                         │ Adaptive Risk Engine    │
+                         │                         │
+                         │ LOW → Approve          │
+                         │ MEDIUM → 2FA           │
+                         │ HIGH → Protection      │
+                         └────────────┬────────────┘
+                                      │
+                       ┌──────────────┴──────────────┐
+                       ▼                             ▼
+              ┌─────────────────┐          ┌─────────────────┐
+              │ SQLite Database │          │ Security / 2FA  │
+              │ Audit & History │          │ OTP Management  │
+              └────────┬────────┘          └────────┬────────┘
+                       │                             │
+                       └──────────────┬──────────────┘
+                                      ▼
+                         ┌─────────────────────────┐
+                         │ React Frontend         │
+                         │ Risk Intelligence UI   │
+                         └─────────────────────────┘
+```
 
 ---
 
-## 🧠 Dual-Engine Machine Learning Architecture
+# 🧠 Machine Learning Pipeline
 
-### 1. IEEE-CIS Batch & Assessment Classifier (`ml/`)
-Trained on the **IEEE-CIS Fraud Detection Benchmark** (590,000+ real-world e-commerce transactions):
-- **Model**: Extreme Gradient Boosting (`XGBoostClassifier`)
-- **Key Metrics**:
-  - **ROC-AUC**: `0.8587`
-  - **Recall**: `72.34%`
-  - **Precision**: `68.12%`
-  - **Inference Latency**: `< 4ms` per transaction
-- **Feature Engineering Pipeline**:
-  - `amt_log`: Logarithmic transaction amount $\ln(1 + \text{TransactionAmt})$
-  - `tx_hour` & `tx_day`: Cyclic temporal behavior extracted from `TransactionDT`
-  - `P_emaildomain`: Categorical coarsening into primary providers (`gmail`, `yahoo`, `microsoft`, `anonymous`, `other`)
-  - `C1` & `C5`: Frequency velocity counters and association tracking
-  - `id_present`: Binary identity profile flag
+## IEEE-CIS Fraud Detection
 
-### 2. PaySim Real-Time Streaming Scorer (`streaming/`)
-Trained on the **PaySim Synthetic Mobile Money Dataset** (simulating 30 days / 744 hours of live mobile transactions):
-- **Model**: Fast-Inference Tree Scorer with SMOTE class balancing
-- **Key Features Engineered**:
-  - **Origin Ledger Discrepancy**: $\text{errorBalanceOrig} = (\text{oldbalanceOrg} - \text{amount}) - \text{newbalanceOrig}$
-  - **Destination Ledger Discrepancy**: $\text{errorBalanceDest} = (\text{oldbalanceDest} + \text{amount}) - \text{newbalanceDest}$
-  - **24-Step Sliding-Window Velocity**:
-    - `orig_txn_count_window`: Number of transactions sent by account in rolling 24-step window
-    - `orig_amount_sum_window`: Cumulative volume sent in rolling 24-step window
-    - `orig_amount_avg_window`: Average transfer volume in rolling 24-step window
+The IEEE-CIS pipeline is designed for card-not-present and e-commerce transaction fraud detection.
+
+### Model
+
+**XGBoost Classifier**
+
+### Reported Performance
+
+| Metric            |     Result |
+| ----------------- | ---------: |
+| ROC-AUC           | **0.8587** |
+| Recall            | **72.34%** |
+| Precision         | **68.12%** |
+| Inference Latency | **< 4 ms** |
+
+### Feature Engineering
+
+The pipeline derives behavioural and transaction-level features such as:
+
+* Log-transformed transaction amount
+* Transaction hour and day
+* Email-domain grouping
+* Frequency counters
+* Association tracking
+* Digital identity presence
 
 ---
 
-## 🔮 Explainable AI (TreeSHAP) Integration
+# 💳 PaySim Streaming Pipeline
 
-Rather than acting as an opaque "black-box", FraudGuard-AI uses **TreeSHAP (SHapley Additive exPlanations)** to compute mathematically proven Shapley values for every prediction:
+The PaySim pipeline is designed to simulate high-volume mobile-money transaction processing.
 
-$$\text{Output Margin } f(x) = \phi_0 + \sum_{i=1}^{M} \phi_i(x)$$
+### Key Features
+
+**Balance discrepancy**
+
+```text
+errorBalanceOrig =
+(oldbalanceOrg - amount) - newbalanceOrig
+```
+
+```text
+errorBalanceDest =
+(oldbalanceDest + amount) - newbalanceDest
+```
+
+### Sliding-Window Features
+
+The streaming engine maintains a rolling 24-step window and calculates:
+
+```text
+orig_txn_count_window
+orig_amount_sum_window
+orig_amount_avg_window
+```
+
+These features provide behavioural context beyond the current transaction.
+
+---
+
+# 🔍 Explainable AI with TreeSHAP
+
+FraudGuard-AI integrates **TreeSHAP (SHapley Additive exPlanations)** with the XGBoost model.
+
+The prediction can be represented as:
+
+```text
+f(x) = φ₀ + Σ φᵢ(x)
+```
 
 Where:
-- $\phi_0$ is the base expected margin (log-odds prior).
-- $\phi_i(x)$ is the exact marginal contribution of feature $i$ towards or against fraud.
 
-### Per-Transaction Visual Waterfall & Force Bars
-In the **Manual Assessment** dashboard (`/assessment`):
-- **Risk-Increasing Factors (Crimson Red `+` Bars)**: Features that pushed the risk score higher (e.g., `Transaction Amount > $2,500 (+0.81)`, `Velocity Spike (+0.32)`, `Missing Identity Record (+0.18)`).
-- **Safety Factors (Emerald Green `-` Bars)**: Features that reduced the risk score (e.g., `Standard Billing Region (-0.29)`, `Known Email Provider (-0.14)`).
-- **Filter Tabs**: Toggle between **All Factors**, **Risk Drivers (+)**, and **Safety Factors (-)**.
+* `φ₀` represents the base model output
+* `φᵢ(x)` represents the contribution of feature `i`
+* Positive contributions increase fraud risk
+* Negative contributions decrease fraud risk
 
-### Global Model Feature Importance Matrix
-In the **Analytics & Models** dashboard (`/analytics`):
-- Full-width ranking of top feature gain weights across the entire model.
-- Categorization across **Amount & Volume**, **Frequency & Velocity**, **Identity & Device**, **Payment Method**, and **Temporal Behavior**.
+The frontend visualizes these contributions through interactive risk-driver and safety-factor components.
+
+### Example
+
+```text
+Risk Increasing Factors
+────────────────────────
+Transaction Amount       +0.75
+Velocity                  +0.32
+Missing Identity Record   +0.18
+
+Risk Reducing Factors
+──────────────────────
+Known Email Provider      -0.14
+Billing Region            -0.29
+```
+
+This allows analysts to understand **why** a transaction was classified as risky.
 
 ---
 
-## 🔐 Adaptive 2FA & Multi-Factor Security System
+# 🔐 Adaptive Security Engine
 
-FraudGuard-AI employs an **Adaptive Multi-Factor Authentication (MFA)** policy:
+FraudGuard-AI converts fraud probability into a normalized **0–100 risk score**.
 
-| Risk Tier | Score Band | Automated Security Action | Verification Mechanism |
-| :--- | :---: | :--- | :--- |
-| **LOW** | $0 - 30$ | **Auto-Approved** | Zero-friction instant clearance & settlement. |
-| **MEDIUM** | $31 - 70$ | **2FA Challenge Required** | 6-Digit OTP dispatched; funds held in pending vault. |
-| **HIGH** | $71 - 100$ | **Critical 2FA / Card Freeze** | 6-Digit OTP required; immediate card freeze upon failure/abort. |
+```text
+Fraud Probability
+        │
+        ▼
+   Risk Scoring
+        │
+        ▼
+┌───────────────────────┐
+│ 0 – 30   → LOW        │
+│ 31 – 70  → MEDIUM     │
+│ 71 – 100 → HIGH       │
+└───────────────────────┘
+```
 
-### 2FA Components:
-1. **2FA & Security Center (`/security`)**:
-   - Centralized repository of all dispatched security passcodes.
-   - Live transaction amount highlights, risk badges, account routing (`nameOrig` $\rightarrow$ `nameDest`), and timestamps.
-   - Filterable by `ALL`, `PENDING`, `VERIFIED`, and `ABORTED`.
-   - Instant 1-click **Copy OTP** button.
-2. **Interactive 2FA Terminal (`/`)**:
-   - Integrated directly into the Real-Time Streaming feed.
-   - Enter the 6-digit OTP code to **Validate & Proceed** (clears and settles transaction).
-   - Click **Abort Transaction** to permanently halt and freeze funds.
+The resulting risk tier determines the appropriate security response.
+
+### LOW
+
+Transaction proceeds automatically.
+
+### MEDIUM
+
+The transaction enters a verification state and requires OTP-based 2FA.
+
+### HIGH
+
+The transaction requires critical verification and additional transaction protection.
 
 ---
 
-## 📡 Apache Kafka Real-Time Streaming Pipeline
+# 📡 Apache Kafka Architecture
 
-```
-PaySim Dataset ──► Producer (producer.py) ──► Kafka Topic: 'transactions'
-                                                    │
-                                                    ▼
-                                          Consumer (consumer.py)
-                                                    │  (Velocity + XGBoost Scoring)
-                                                    ▼
-                             ┌──────────────────────┴──────────────────────┐
-                             ▼                                             ▼
-                 SQLite DB (predictions.db)                  Kafka Topic: 'fraud_alerts'
-                                                                           │
-                                                                           ▼
-                                                              Alert Consumer (alert_consumer.py)
-```
+FraudGuard-AI uses **Apache Kafka 3.7.0 in KRaft mode**, eliminating the need for ZooKeeper.
 
-- **Kafka Broker Configuration**: Apache Kafka 3.7.0 in KRaft mode (no ZooKeeper required).
-- **Topics**:
-  - `transactions` (3 partitions, replication factor 1)
-  - `fraud_alerts` (3 partitions, replication factor 1)
-- **Stateful Sliding-Window Tracker**: In-memory rolling dictionary tracking account history across sliding hourly steps.
+### Kafka Topics
+
+| Topic          | Partitions | Purpose                     |
+| -------------- | ---------: | --------------------------- |
+| `transactions` |          3 | Incoming transaction events |
+| `fraud_alerts` |          3 | Fraud and risk alerts       |
+
+### Streaming Components
+
+```text
+producer.py
+     │
+     ▼
+transactions
+     │
+     ▼
+consumer.py
+     │
+     ├── Feature Engineering
+     ├── Sliding Window
+     ├── ML Prediction
+     └── Risk Scoring
+     │
+     ├──────────────► predictions.db
+     │
+     ▼
+fraud_alerts
+     │
+     ▼
+alert_consumer.py
+```
 
 ---
 
-## 📂 Repository File Structure
+# 🔌 REST API
 
+The backend is implemented using **FastAPI** and exposes RESTful endpoints for transaction prediction, analytics, health monitoring, and transaction history.
+
+### Main Endpoints
+
+| Method | Endpoint                       | Description                          |
+| ------ | ------------------------------ | ------------------------------------ |
+| `GET`  | `/health`                      | Backend health check                 |
+| `POST` | `/predict`                     | Predict transaction fraud risk       |
+| `GET`  | `/transactions`                | Retrieve transaction history         |
+| `GET`  | `/transactions/{id}`           | Retrieve transaction details         |
+| `GET`  | `/analytics/summary`           | Retrieve overall transaction metrics |
+| `GET`  | `/analytics/risk-distribution` | Retrieve risk-level distribution     |
+| `GET`  | `/analytics/global-shap`       | Retrieve global feature importance   |
+
+### API Documentation
+
+When the backend is running:
+
+```text
+http://localhost:8000/docs
 ```
+
+FastAPI automatically provides interactive Swagger API documentation.
+
+---
+
+# 🖥️ Frontend Modules
+
+| Module                  | Route           | Purpose                                  |
+| ----------------------- | --------------- | ---------------------------------------- |
+| **Real-Time Streaming** | `/`             | Live Kafka transactions and 2FA handling |
+| **Security Center**     | `/security`     | OTP and security monitoring              |
+| **Manual Assessment**   | `/assessment`   | Individual transaction analysis          |
+| **Analytics**           | `/analytics`    | Risk metrics and model insights          |
+| **Transactions**        | `/transactions` | Historical transaction audit             |
+
+---
+
+# 📂 Project Structure
+
+```text
 FraudGuard-AI/
-├── docker-compose.yml              # Local Apache Kafka cluster (KRaft mode)
-├── ml/                             # Offline IEEE-CIS Machine Learning Pipeline
-│   ├── data/                       # Dataset directory (train_transaction.csv, train_identity.csv)
-│   ├── models/                     # Serialized models & preprocessors
-│   │   ├── selected_model.joblib   # Trained XGBoost classifier
-│   │   └── selected_preprocessor.joblib # Fitted ColumnTransformer
-│   ├── inspect_data.py             # Dataset exploratory data analysis
-│   ├── preprocess.py               # Feature transformation & train/test splitting
-│   ├── train.py                    # Multi-model training (Logistic Regression, Random Forest, XGBoost)
-│   ├── evaluate.py                 # Threshold tuning, ROC-AUC, and model selection
-│   ├── predict.py                  # Real-time inference & TreeSHAP attribution engine
-│   └── risk_score.py               # Continuous fraud probability to 0-100 risk score mapper
-├── backend/                        # FastAPI Backend & REST API
+│
+├── ml/
+│   ├── data/
+│   ├── models/
+│   ├── inspect_data.py
+│   ├── preprocess.py
+│   ├── train.py
+│   ├── evaluate.py
+│   ├── predict.py
+│   └── risk_score.py
+│
+├── backend/
 │   ├── app/
-│   │   ├── main.py                 # FastAPI application & CORS configuration
-│   │   ├── database.py             # SQLite SQLAlchemy engine & session factory
-│   │   ├── models.py               # SQLAlchemy ORM database models
-│   │   ├── schemas.py              # Pydantic v2 request & response schemas (inc. SHAP)
+│   │   ├── main.py
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   ├── schemas.py
 │   │   ├── routers/
-│   │   │   ├── health.py           # Health check router (/health)
-│   │   │   ├── prediction.py       # Assessment prediction router (/predict)
-│   │   │   ├── transactions.py     # Transaction audit router (/transactions)
-│   │   │   └── analytics.py        # Analytics & global SHAP router (/analytics)
+│   │   │   ├── health.py
+│   │   │   ├── prediction.py
+│   │   │   ├── transactions.py
+│   │   │   └── analytics.py
 │   │   └── services/
-│   │       ├── prediction_service.py # ML & TreeSHAP integration bridge
-│   │       └── analytics_service.py  # Aggregate metrics & risk distribution queries
-│   └── requirements.txt            # Python dependencies for backend
-├── streaming/                      # Real-Time Apache Kafka Streaming Engine
-│   ├── config.py                   # Streaming parameters, topics, and thresholds
-│   ├── requirements.txt            # Kafka & streaming dependencies
-│   ├── sliding_window.py           # 24-step stateful rolling window velocity engine
-│   ├── feature_pipeline.py         # Balance discrepancy & streaming feature extractor
-│   ├── generate_sample_data.py     # PaySim dataset generator
-│   ├── train.py                    # PaySim streaming model trainer with SMOTE
-│   ├── producer.py                 # Kafka transaction event stream producer
-│   ├── consumer.py                 # Kafka scoring consumer & SQLite recorder
-│   └── alert_consumer.py           # High-visibility CLI fraud alert monitor
-└── frontend/                       # Interactive React 19 + Vite Dashboard
-    ├── index.html                  # HTML entry point
-    ├── vite.config.ts              # Vite build & proxy configuration
-    ├── src/
-    │   ├── main.tsx                # React DOM root
-    │   ├── App.tsx                 # Root layout, routes, and risk wave animations
-    │   ├── context/
-    │   │   └── StreamContext.tsx   # Global continuous background Kafka streaming engine & 2FA state
-    │   ├── api/
-    │   │   ├── client.ts           # Axios HTTP client
-    │   │   └── fraud.ts            # API service calls (predict, transactions, analytics, global-shap)
-    │   ├── types/
-    │   │   └── index.ts            # TypeScript interfaces (Predictions, SHAP, Transactions, Metrics)
-    │   ├── components/
-    │   │   ├── layout/
-    │   │   │   ├── Sidebar.tsx     # Navigation sidebar & backend health status
-    │   │   │   └── TopBar.tsx      # Header bar
-    │   │   └── ui/
-    │   │       ├── ResultPanel.tsx # Interactive SHAP Feature Attribution & Waterfall Visualizer
-    │   │       ├── GaugeChart.tsx  # Canvas-rendered 0-100 risk score speedometer
-    │   │       ├── MetricCard.tsx  # Glowing animated KPI metric card
-    │   │       ├── ModalCard.tsx   # Expandable deep-dive modal card
-    │   │       ├── RiskBadge.tsx   # Color-coded LOW / MEDIUM / HIGH risk tag
-    │   │       └── 3d-card.tsx     # Interactive 3D perspective card container
-    │   └── pages/
-    │       ├── KafkaStream.tsx     # Real-Time Streaming Engine & 2FA Terminal
-    │       ├── SecurityCenter.tsx  # 2FA & Security Center (Full-Width OTP Dispatch Vault)
-    │       ├── Assessment.tsx      # Manual Assessment & Single Transaction Evaluator
-    │       ├── Analytics.tsx       # Analytics, Risk Segmentation & Global SHAP Matrix
-    │       └── Transactions.tsx    # Combined Audit Trail & Transaction Table
+│   │       ├── prediction_service.py
+│   │       └── analytics_service.py
+│   └── requirements.txt
+│
+├── streaming/
+│   ├── config.py
+│   ├── sliding_window.py
+│   ├── feature_pipeline.py
+│   ├── generate_sample_data.py
+│   ├── train.py
+│   ├── producer.py
+│   ├── consumer.py
+│   └── alert_consumer.py
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── pages/
+│   │   └── types/
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── vite.config.ts
+│
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
-## 🚀 Step-by-Step Installation & Run Guide
+# ⚙️ Installation & Setup
 
-### Prerequisites
-- **Python**: Version `3.10`, `3.11`, or `3.12`
-- **Node.js**: Version `18.0+` & `npm`
-- **Docker & Docker Compose**: (Optional, for running real Apache Kafka broker)
+## Prerequisites
+
+* Python `3.10+`
+* Node.js `18+`
+* npm
+* Docker & Docker Compose
+* Apache Kafka
 
 ---
 
-### Step 1: Clone the Repository
+## 1. Clone the Repository
+
 ```bash
-git clone https://github.com/your-username/FraudGuard-AI.git
-cd FraudGuard-AI
+git clone https://github.com/nishant760/FraudGuard.git
+cd FraudGuard
 ```
 
 ---
 
-### Step 2: Set Up Python Backend Virtual Environment
+## 2. Backend Setup
+
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-cd ..
 ```
 
----
+Start the FastAPI server:
 
-### Step 3: Run the FastAPI Backend Server
 ```bash
-cd backend
-source venv/bin/activate
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-- **API Server**: `http://localhost:8000`
-- **Interactive Swagger Documentation**: `http://localhost:8000/docs`
-- **ReDoc Documentation**: `http://localhost:8000/redoc`
+
+Backend:
+
+```text
+http://localhost:8000
+```
+
+Swagger:
+
+```text
+http://localhost:8000/docs
+```
 
 ---
 
-### Step 4: Set Up and Run the Frontend Dashboard
-Open a new terminal window:
+## 3. Frontend Setup
+
+Open a new terminal:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-- **Web Dashboard**: `http://localhost:5173` (or `http://localhost:5174`)
 
----
+Frontend:
 
-### Step 5: (Optional) Run the Real Apache Kafka Pipeline via Docker
-To run the live distributed Kafka cluster:
-
-1. **Start Apache Kafka (KRaft mode)**:
-   ```bash
-   docker compose up -d
-   ```
-2. **Start the Alert Consumer (Terminal 1)**:
-   ```bash
-   cd streaming
-   python alert_consumer.py
-   ```
-3. **Start the Real-Time ML Consumer (Terminal 2)**:
-   ```bash
-   cd streaming
-   python consumer.py
-   ```
-4. **Start the Transaction Stream Producer (Terminal 3)**:
-   ```bash
-   cd streaming
-   python producer.py --delay 0.05
-   ```
-
----
-
-## 🔌 REST API Endpoints Reference
-
-### 1. `POST /predict`
-Evaluates transaction risk, computes exact TreeSHAP feature contributions, and logs the transaction.
-
-#### Request Body Example:
-```json
-{
-  "TransactionAmt": 2500.00,
-  "TransactionDT": 86400,
-  "ProductCD": "W",
-  "card1": 9500,
-  "card2": 360,
-  "card4": "visa",
-  "card6": "debit",
-  "addr1": 299,
-  "C1": 1.0,
-  "C5": 0.0,
-  "P_emaildomain": "gmail.com",
-  "id_present": 0
-}
-```
-
-#### Response Example:
-```json
-{
-  "transaction_id": "TXN-8B29F1A4",
-  "prediction": 1,
-  "prediction_label": "Fraud",
-  "fraud_probability": 0.6917,
-  "risk_score": 69,
-  "risk_level": "MEDIUM",
-  "model_used": "XGBoost",
-  "shap_explanation": {
-    "base_value": 0.0036,
-    "contributions": [
-      {
-        "feature": "num__TransactionAmt",
-        "display_name": "Transaction Amount ($)",
-        "category": "Amount & Volume",
-        "raw_value": "2500.0",
-        "shap_value": 0.7572,
-        "impact_pct": 28.42,
-        "direction": "RISK_INCREASING",
-        "description": "Transaction amount ($2500.0) significantly drives fraud probability upward."
-      },
-      {
-        "feature": "num__C5",
-        "display_name": "Association Match (C5)",
-        "category": "Frequency & Velocity",
-        "raw_value": "0.0",
-        "shap_value": 0.3962,
-        "impact_pct": 14.87,
-        "direction": "RISK_INCREASING",
-        "description": "Associated identity count (0.0) impact on decision boundary."
-      }
-    ],
-    "top_risk_drivers": [
-      "Transaction Amount ($) (Transaction amount ($2500.0) significantly drives fraud probability upward.)"
-    ],
-    "top_safe_drivers": [
-      "Billing Region (addr1) (Billing geographic code (299.0).)"
-    ]
-  }
-}
+```text
+http://localhost:5173
 ```
 
 ---
 
-### 2. `GET /analytics/global-shap`
-Returns global feature importance ranked by gain from the trained XGBoost model.
+## 4. Start Kafka
 
-#### Response Example:
-```json
-{
-  "features": [
-    {
-      "feature": "cat__ProductCD_C",
-      "display_name": "Product Category (C)",
-      "category": "Transaction Type",
-      "importance_score": 7075.40,
-      "importance_pct": 20.07
-    },
-    {
-      "feature": "num__C5",
-      "display_name": "Association Match (C5)",
-      "category": "Frequency & Velocity",
-      "importance_score": 4671.87,
-      "importance_pct": 13.25
-    },
-    {
-      "feature": "bin__id_present",
-      "display_name": "Digital Identity Record",
-      "category": "Identity & Device",
-      "importance_score": 3577.91,
-      "importance_pct": 10.15
-    }
-  ]
-}
+From the project root:
+
+```bash
+docker compose up -d
+```
+
+Then start the streaming components in separate terminals.
+
+### Alert Consumer
+
+```bash
+cd streaming
+python alert_consumer.py
+```
+
+### ML Consumer
+
+```bash
+cd streaming
+python consumer.py
+```
+
+### Transaction Producer
+
+```bash
+cd streaming
+python producer.py --delay 0.05
 ```
 
 ---
 
-### 3. Additional Endpoints
+# 🛠️ Technology Stack
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | API health check & connectivity status |
-| `GET` | `/transactions` | List past transactions (supports `?risk_level=HIGH&prediction=1`) |
-| `GET` | `/transactions/{id}` | Detailed record of a single transaction |
-| `GET` | `/analytics/summary` | Total volume, fraud count, fraud rate, and average amounts |
-| `GET` | `/analytics/risk-distribution` | Count and percentage breakdown across Low, Medium, and High tiers |
+### Machine Learning
 
----
+* Python
+* XGBoost
+* Scikit-Learn
+* Pandas
+* NumPy
+* Joblib
+* Imbalanced-Learn / SMOTE
+* TreeSHAP
 
-## 🖥️ Frontend Dashboard Modules
+### Backend
 
-| Module | Route | Key Features & Purpose |
-| :--- | :---: | :--- |
-| **Real-Time Streaming Engine** | `/` | Live Kafka stream feed, velocity tracking, burst attack injection, in-stream 2FA validation terminal, and real-time SHAP driver chips. |
-| **2FA & Security Center** | `/security` | Full-width OTP Dispatch Vault, 1-click **Copy OTP**, real-time status filters (`ALL`, `PENDING`, `VERIFIED`, `ABORTED`), and transaction amount highlights. |
-| **Manual Assessment & XAI** | `/assessment` | Instant single-transaction evaluation with interactive **SHAP Force / Waterfall Visualizer**, Gauge speedometer, and preset loaders. |
-| **Analytics & Model Telemetry** | `/analytics` | Real-time portfolio metrics, risk tier donut chart, **Global SHAP Feature Importance Matrix**, and dual-pipeline specs. |
-| **Transaction Audit Log** | `/transactions` | Combined audit table merging persistent SQLite records with live in-memory Kafka events, with multi-column sorting and pagination. |
+* FastAPI
+* Pydantic
+* SQLAlchemy
+* SQLite
+* REST API
 
----
+### Real-Time Processing
 
-## 🛠️ Tech Stack
+* Apache Kafka
+* Kafka KRaft
+* kafka-python-ng
+* Docker
+* Docker Compose
 
-- **Machine Learning & Analytics**:
-  - `XGBoost` (Extreme Gradient Boosting Classifier & native TreeSHAP)
-  - `Scikit-Learn` (ColumnTransformer, StandardScaler, OneHotEncoder)
-  - `Pandas`, `NumPy`, `Joblib`
-  - `Imbalanced-Learn` (SMOTE oversampling)
-- **Backend & Streaming**:
-  - `FastAPI` (Asynchronous ASGI Web Framework)
-  - `SQLAlchemy` & `SQLite` (ORM & Persistence)
-  - `Apache Kafka 3.7.0` (KRaft distributed broker)
-  - `kafka-python-ng` & `Docker Compose`
-- **Frontend & Visualization**:
-  - `React 19`, `TypeScript`, `Vite`
-  - `Lucide React` (Modern icon set)
-  - `Recharts` (Responsive SVG charting)
-  - `Framer Motion` & Canvas API (Smooth kinetic transitions & particle waves)
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* Axios
+* Recharts
+* Lucide React
+* Framer Motion
+* HTML5 Canvas
 
 ---
 
-## 📄 License & Attribution
-Distributed under the **MIT License**. Built for enterprise fraud defense and financial risk intelligence.
+# 🔄 End-to-End Transaction Flow
 
+```text
+Transaction
+     │
+     ▼
+Data Ingestion
+     │
+     ▼
+Feature Engineering
+     │
+     ├───────────────┐
+     │               │
+     ▼               ▼
+Batch Pipeline   Kafka Pipeline
+     │               │
+     │          Sliding Window
+     │               │
+     └───────┬───────┘
+             ▼
+       XGBoost Model
+             │
+             ▼
+       Fraud Probability
+             │
+             ▼
+        Risk Score
+        0 ─────── 100
+             │
+       ┌─────┼─────┐
+       ▼     ▼     ▼
+      LOW  MEDIUM  HIGH
+       │     │      │
+       ▼     ▼      ▼
+    Approve 2FA   Protection
+             │
+             ▼
+        TreeSHAP
+       Explanation
+             │
+             ▼
+       SQLite / Kafka
+             │
+             ▼
+      React Dashboard
+```
+
+---
+
+# 🎯 Project Objectives
+
+FraudGuard-AI aims to provide a comprehensive fraud intelligence solution capable of:
+
+* Detecting potentially fraudulent financial transactions
+* Processing transactions in real time
+* Identifying abnormal behavioural patterns
+* Generating continuous risk scores
+* Explaining ML predictions using XAI
+* Applying risk-based authentication
+* Maintaining transaction audit history
+* Providing real-time fraud monitoring and analytics
+
+---
+
+# 📌 Highlights
+
+> **Real-Time Detection** — Kafka-powered transaction streaming and scoring.
+
+> **Explainable Predictions** — TreeSHAP-based transaction-level explanations.
+
+> **Adaptive Security** — Risk-based authentication and transaction protection.
+
+> **Behavioural Intelligence** — Sliding-window transaction velocity analysis.
+
+> **Full-Stack Architecture** — React frontend, FastAPI backend, ML services, Kafka streaming, and persistent storage.
+
+---
+
+# 📄 License
+
+This project is distributed under the **MIT License**.
+
+---
+
+## 👨‍💻 Author
+
+**Nishant**
+
+Built as a full-stack Financial Fraud Detection and Risk Intelligence Platform integrating Machine Learning, Explainable AI, Real-Time Streaming, and Adaptive Security.
