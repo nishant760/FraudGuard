@@ -56,6 +56,8 @@ interface StreamContextType {
   lastLatency: number;
   activeStep: number;
   notifications: OtpNotification[];
+  /** Live running balances per account — deducted each time an OTP is authorized */
+  runningBalances: Record<string, number>;
   dismissNotification: (id: string) => void;
   clearAllNotifications: () => void;
   resendOtpNotification: (txnId: string) => void;
@@ -74,6 +76,13 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<StreamTransaction[]>([]);
   const [selectedTxn, setSelectedTxn] = useState<StreamTransaction | null>(null);
   const [notifications, setNotifications] = useState<OtpNotification[]>([]);
+
+  // Live balance per account — starts from CUSTOMER_ACCOUNTS, deducted on each authorization
+  const [runningBalances, setRunningBalances] = useState<Record<string, number>>(
+    () => Object.fromEntries(
+      Object.entries(CUSTOMER_ACCOUNTS).map(([id, p]) => [id, p.balance])
+    )
+  );
 
   // Aggregate stats across continuous stream
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -319,35 +328,34 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
   };
 
   const validateOtp = (txnId: string, inputOtp: string): boolean => {
-    let success = false;
     const cleanInput = inputOtp.trim();
 
+    // Check OTP synchronously against current state before calling setState
+    const txn = transactions.find((t) => t.txn_id === txnId);
+    if (!txn || txn.otp_code !== cleanInput) return false;
+
+    // ── OTP correct — update transaction status ───────────────────────────────
     setTransactions((prev) =>
-      prev.map((t) => {
-        if (t.txn_id === txnId) {
-          if (t.otp_code === cleanInput) {
-            success = true;
-            return { ...t, auth_status: 'APPROVED_2FA' };
-          }
-        }
-        return t;
-      })
+      prev.map((t) =>
+        t.txn_id === txnId ? { ...t, auth_status: 'APPROVED_2FA' } : t
+      )
     );
 
-    setSelectedTxn((prev) => {
-      if (prev && prev.txn_id === txnId) {
-        if (prev.otp_code === cleanInput) {
-          return { ...prev, auth_status: 'APPROVED_2FA' };
-        }
-      }
-      return prev;
-    });
+    setSelectedTxn((prev) =>
+      prev?.txn_id === txnId ? { ...prev, auth_status: 'APPROVED_2FA' } : prev
+    );
 
-    if (success) {
-      setNotifications((prev) => prev.filter((n) => n.txnId !== txnId));
-    }
+    // ── Deduct amount from the account's running balance ──────────────────────
+    // This updates the live "Available Balance" immediately so the customer
+    // sees the correct balance on the next pending verification.
+    setRunningBalances((prev) => ({
+      ...prev,
+      [txn.nameOrig]: (prev[txn.nameOrig] ?? 0) - txn.amount,
+    }));
 
-    return success;
+    setNotifications((prev) => prev.filter((n) => n.txnId !== txnId));
+
+    return true;
   };
 
   const abortTransaction = (txnId: string) => {
@@ -385,6 +393,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
       lastLatency,
       activeStep,
       notifications,
+      runningBalances,
       dismissNotification,
       clearAllNotifications,
       resendOtpNotification,
@@ -405,6 +414,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
       lastLatency,
       activeStep,
       notifications,
+      runningBalances,
     ]
   );
 

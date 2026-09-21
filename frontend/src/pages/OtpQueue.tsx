@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import KineticTitle from '../components/ui/KineticTitle';
 import { useStream, CUSTOMER_ACCOUNTS, DEST_LABELS } from '../context/StreamContext';
 import {
-  KeyRound, ArrowRight, ShieldAlert, CheckCircle2, XCircle, Clock, Zap,
+  KeyRound, ShieldAlert, CheckCircle2, XCircle, Clock, Zap,
 } from 'lucide-react';
 
 function resolveDestName(id: string) {
@@ -14,26 +13,19 @@ function resolveOrigName(id: string) {
 }
 
 export default function OtpQueue() {
-  const { transactions, setSelectedTxn } = useStream();
-  const navigate = useNavigate();
+  const { transactions } = useStream();
 
-  // ── CORRECT FILTER: only show transactions where an OTP was actually issued ──
-  // otp_code is only generated for MEDIUM and HIGH risk transactions.
+  // Only show transactions where an OTP was actually issued (MEDIUM and HIGH risk).
   // AUTO_APPROVED (LOW risk) transactions never get an otp_code — exclude them entirely.
   const otpTransactions = useMemo(() => {
     return transactions
-      .filter((t) => t.otp_code !== undefined)   // only 2FA-required txns
+      .filter((t) => t.otp_code !== undefined)
       .slice(0, 50);
   }, [transactions]);
 
   const pendingList = otpTransactions.filter((t) => t.auth_status === 'PENDING_2FA');
   const settledList = otpTransactions.filter((t) => t.auth_status !== 'PENDING_2FA');
 
-  const handleOpenPortal = (txnId: string) => {
-    const txn = transactions.find((t) => t.txn_id === txnId);
-    if (txn) setSelectedTxn(txn);
-    navigate(`/security?txn=${txnId}`);
-  };
 
   const riskColor = (level: string) => {
     if (level === 'HIGH') return { color: '#ef4444', bg: 'rgba(239,68,68,.12)', border: 'rgba(239,68,68,.3)' };
@@ -174,27 +166,6 @@ export default function OtpQueue() {
           )}
         </td>
 
-        {/* Action */}
-        <td style={{ padding: '13px 14px', textAlign: 'right' }}>
-          <button
-            type="button"
-            onClick={() => handleOpenPortal(item.txn_id)}
-            className="btn btn-primary btn-sm"
-            style={{
-              fontSize: 11,
-              padding: '5px 12px',
-              height: 30,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              background: isPending ? '#6366f1' : 'var(--bg-base)',
-              borderColor: isPending ? '#6366f1' : 'var(--border-base)',
-              color: isPending ? '#fff' : 'var(--text-secondary)',
-            }}
-          >
-            Open Portal <ArrowRight size={12} />
-          </button>
-        </td>
       </tr>
     );
   };

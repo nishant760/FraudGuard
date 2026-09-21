@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
@@ -9,21 +9,39 @@ import OtpQueue from './pages/OtpQueue';
 import Assessment from './pages/Assessment';
 import Analytics from './pages/Analytics';
 import Transactions from './pages/Transactions';
+import ConsumerTransactions from './pages/ConsumerTransactions';
 import MosaicWaves from './components/ui/MosaicWaves';
 import { StreamProvider } from './context/StreamContext';
-// import BlinkingDots from './components/ui/BlinkingDots'
+import { AuthProvider, useAuth, type UserRole } from './context/AuthContext';
 import type { RiskLevel } from './lib/dotsEvent';
 
-
-const DEFAULT_DOTS_COLOR = '#10b981'; // Original emerald green
+const DEFAULT_DOTS_COLOR = '#10b981';
 const RISK_DOTS_COLORS: Record<RiskLevel, string> = {
-  LOW: '#10b981',    // Low risk: no change, stays original green
-  MEDIUM: '#f59e0b', // Medium risk: warm amber
-  HIGH: '#ef4444',   // High risk: alert crimson red
+  LOW: '#10b981',
+  MEDIUM: '#f59e0b',
+  HIGH: '#ef4444',
 };
 
-export default function App() {
-  const [hasEntered, setHasEntered] = useState<boolean>(false);
+// ── Route guard — silently redirects if role not permitted ────────────────────
+function RoleGuard({
+  allow,
+  fallback,
+  children,
+}: {
+  allow: UserRole[];
+  fallback: string;
+  children: React.ReactNode;
+}) {
+  const { user } = useAuth();
+  if (!user || !allow.includes(user.role)) {
+    return <Navigate to={fallback} replace />;
+  }
+  return <>{children}</>;
+}
+
+// ── Main app content ───────────────────────────────────────────────────────────
+function AppContent() {
+  const { user } = useAuth();
   const [dotsColor, setDotsColor] = useState<string>(DEFAULT_DOTS_COLOR);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -31,23 +49,17 @@ export default function App() {
     const handleRiskAssessed = (e: Event) => {
       const customEvent = e as CustomEvent<{ riskLevel: RiskLevel }>;
       const riskLevel = customEvent.detail?.riskLevel;
-
       if (!riskLevel) return;
 
-      // Clear any existing active countdown
       if (resetTimerRef.current) {
         clearTimeout(resetTimerRef.current);
         resetTimerRef.current = null;
       }
 
       if (riskLevel === 'LOW') {
-        // Low risk: no change, stays original green
         setDotsColor(DEFAULT_DOTS_COLOR);
       } else if (riskLevel === 'MEDIUM' || riskLevel === 'HIGH') {
-        // Change color of the dots to match transaction risk level
         setDotsColor(RISK_DOTS_COLORS[riskLevel]);
-
-        // Keep it for 3 seconds, then return to original green
         resetTimerRef.current = setTimeout(() => {
           setDotsColor(DEFAULT_DOTS_COLOR);
           resetTimerRef.current = null;
@@ -58,15 +70,15 @@ export default function App() {
     window.addEventListener('fraudguard:risk-assessed', handleRiskAssessed);
     return () => {
       window.removeEventListener('fraudguard:risk-assessed', handleRiskAssessed);
-      if (resetTimerRef.current) {
-        clearTimeout(resetTimerRef.current);
-      }
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
 
+  const orgHome      = '/';           // Bank Ops lands on Kafka Stream
+  const consumerHome = '/assessment'; // Consumer lands on Payment Risk Scanner
+
   return (
     <>
-      {/* Background Animated Mosaic Waves Grid */}
       <MosaicWaves
         dotSize={1.15}
         gridGap={9}
@@ -79,30 +91,104 @@ export default function App() {
         interactive={true}
       />
 
-      {!hasEntered ? (
-        <WelcomeScreen onEnter={() => setHasEntered(true)} />
+      {!user ? (
+        <WelcomeScreen />
       ) : (
-        <StreamProvider>
-          <BrowserRouter>
-            {/* Main Layout Container */}
-            <div className="app-layout">
-              <Sidebar />
-              <div className="app-main">
-                <TopBar />
-                <Routes>
-                  <Route path="/" element={<KafkaStream />} />
-                  <Route path="/otp-queue" element={<OtpQueue />} />
-                  <Route path="/security" element={<SecurityCenter />} />
-                  <Route path="/assessment" element={<Assessment />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/transactions" element={<Transactions />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </div>
+        <BrowserRouter>
+          <div className="app-layout">
+            <Sidebar />
+            <div className="app-main">
+              <TopBar />
+              <Routes>
+
+                {/* ── ORGANISATION-ONLY ──────────────────────────────────── */}
+
+                {/* Kafka real-time stream — org default home */}
+                <Route
+                  path="/"
+                  element={
+                    <RoleGuard allow={['ORGANISATION']} fallback={consumerHome}>
+                      <KafkaStream />
+                    </RoleGuard>
+                  }
+                />
+
+                {/* Fleet OTP verification queue */}
+                <Route
+                  path="/otp-queue"
+                  element={
+                    <RoleGuard allow={['ORGANISATION']} fallback={consumerHome}>
+                      <OtpQueue />
+                    </RoleGuard>
+                  }
+                />
+
+                {/* ML analytics & model performance */}
+                <Route
+                  path="/analytics"
+                  element={
+                    <RoleGuard allow={['ORGANISATION']} fallback={consumerHome}>
+                      <Analytics />
+                    </RoleGuard>
+                  }
+                />
+
+                {/* Full audit log — org sees DB audit; consumer sees personal stream */}
+                <Route
+                  path="/transactions"
+                  element={
+                    user.role === 'ORGANISATION'
+                      ? <Transactions />
+                      : <ConsumerTransactions />
+                  }
+                />
+
+                {/* ── CONSUMER-ONLY ─────────────────────────────────────── */}
+
+                {/* Pre-payment safety scanner */}
+                <Route
+                  path="/assessment"
+                  element={
+                    <RoleGuard allow={['CONSUMER']} fallback={orgHome}>
+                      <Assessment />
+                    </RoleGuard>
+                  }
+                />
+
+                {/* Personal 2FA & card security portal */}
+                <Route
+                  path="/security"
+                  element={
+                    <RoleGuard allow={['CONSUMER']} fallback="/otp-queue">
+                      <SecurityCenter />
+                    </RoleGuard>
+                  }
+                />
+
+                {/* ── CATCH-ALL ─────────────────────────────────────────── */}
+                <Route
+                  path="*"
+                  element={
+                    <Navigate to={user.role === 'CONSUMER' ? consumerHome : orgHome} replace />
+                  }
+                />
+
+              </Routes>
             </div>
-          </BrowserRouter>
-        </StreamProvider>
+          </div>
+        </BrowserRouter>
       )}
     </>
+  );
+}
+
+// ── Root export — stream runs continuously; auth sits inside it ───────────────
+export default function App() {
+  return (
+    <AuthProvider>
+      <StreamProvider>
+        <AppContent />
+      </StreamProvider>
+    </AuthProvider>
   );
 }

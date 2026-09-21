@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import KineticTitle from '../components/ui/KineticTitle';
 import GlowingCard from '../components/ui/GlowingCard';
 import { useStream, CUSTOMER_ACCOUNTS, DEST_LABELS } from '../context/StreamContext';
+import { useAuth } from '../context/AuthContext';
 import type { StreamTransaction } from '../types';
 import {
   KeyRound,
@@ -29,7 +30,8 @@ export default function SecurityCenter() {
   const navigate = useNavigate();
   const focusTxnId = searchParams.get('txn');
 
-  const { transactions, setSelectedTxn, validateOtp, abortTransaction } = useStream();
+  const { transactions, setSelectedTxn, validateOtp, abortTransaction, runningBalances } = useStream();
+  const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -44,8 +46,12 @@ export default function SecurityCenter() {
     return transactions.find((t) => t.txn_id === focusTxnId) ?? null;
   }, [focusTxnId, transactions]);
 
-  // The customer we're viewing — derived from the focused transaction's nameOrig
-  const customerId = focusTxn?.nameOrig ?? null;
+  // The customer we're viewing:
+  // 1. From the focused transaction (most specific)
+  // 2. Fallback to auth accountId for consumers (auto-load their own account)
+  const customerId =
+    focusTxn?.nameOrig ??
+    (user?.role === 'CONSUMER' ? user.accountId : null);
   const customerProfile = customerId ? CUSTOMER_ACCOUNTS[customerId] : null;
 
   // Sync active challenge when URL param changes
@@ -63,10 +69,19 @@ export default function SecurityCenter() {
     return myTransactions.filter((t) => t.auth_status === 'PENDING_2FA');
   }, [myTransactions]);
 
-  // Auto-select first pending when active challenge resolves
+  // Auto-advance to the next pending challenge when the current one is resolved
   useEffect(() => {
-    if (!activeChallengeTxnId && pendingChallenges.length > 0) {
-      setActiveChallengeTxnId(pendingChallenges[0].txn_id);
+    const activeIsStillPending = pendingChallenges.some(
+      (t) => t.txn_id === activeChallengeTxnId
+    );
+    if (!activeIsStillPending) {
+      // current active is gone (verified/declined) — move to next pending or clear
+      setActiveChallengeTxnId(
+        pendingChallenges.length > 0 ? pendingChallenges[0].txn_id : null
+      );
+      setOtpInput('');
+      setAuthSuccess(null);
+      setAuthMessage(null);
     }
   }, [pendingChallenges, activeChallengeTxnId]);
 
@@ -75,9 +90,12 @@ export default function SecurityCenter() {
     return pendingChallenges[0] ?? myTransactions[0];
   }, [activeChallengeTxnId, myTransactions, pendingChallenges]);
 
-  // Search filter
+  // Transaction Statement: only show transactions that required OTP verification
+  // (MEDIUM and HIGH risk — otp_code is set). LOW risk AUTO_APPROVED ones are excluded.
   const filteredHistory = useMemo(() => {
-    const base = myTransactions.slice(0, 20);
+    const base = myTransactions
+      .filter((t) => t.otp_code !== undefined)  // only OTP-required transactions
+      .slice(0, 20);
     if (!searchQuery.trim()) return base;
     const q = searchQuery.toLowerCase();
     return base.filter(
@@ -224,9 +242,15 @@ export default function SecurityCenter() {
             {/* Balance */}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', fontWeight: 700 }}>Available Balance</div>
-              <div style={{ fontSize: 26, fontWeight: 900, fontFamily: 'monospace', color: '#10b981', marginTop: 3 }}>
-                ${customerProfile.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </div>
+              {(() => {
+                const liveBalance = runningBalances[customerId] ?? customerProfile.balance;
+                const isNegative = liveBalance < 0;
+                return (
+                  <div style={{ fontSize: 26, fontWeight: 900, fontFamily: 'monospace', color: isNegative ? '#ef4444' : '#10b981', marginTop: 3 }}>
+                    {isNegative ? '-' : ''}${Math.abs(liveBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
