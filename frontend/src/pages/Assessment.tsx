@@ -7,6 +7,8 @@ import KineticTitle from '../components/ui/KineticTitle';
 import { Button } from '@/components/ui/stateful-button';
 import { Zap, RefreshCw, AlertCircle } from 'lucide-react';
 import { triggerRiskDots } from '../lib/dotsEvent';
+import { useStream } from '../context/StreamContext';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULTS: TransactionPredictRequest = {
   TransactionAmt: 250.00,
@@ -39,6 +41,9 @@ const HIGH_RISK_PRESET: TransactionPredictRequest = {
 };
 
 export default function Assessment() {
+  const { user } = useAuth();
+  const { addAssessmentEntry } = useStream();
+
   const [form, setForm] = useState<TransactionPredictRequest>(DEFAULTS);
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +61,23 @@ export default function Assessment() {
       const res = await predictTransaction(form);
       setResult(res);
       triggerRiskDots(res.risk_level);
+
+      // If a consumer is logged in, inject this assessment into their personal history
+      if (user?.role === 'CONSUMER' && user.accountId) {
+        addAssessmentEntry(user.accountId, {
+          txn_id: res.transaction_id ?? `ASS-${Date.now()}`,
+          amount: form.TransactionAmt,
+          type: form.ProductCD === 'T' ? 'TRANSFER' : form.ProductCD === 'C' ? 'CASH_OUT' : 'PAYMENT',
+          risk_level: res.risk_level,
+          risk_score: res.risk_score,
+          fraud_probability: res.fraud_probability,
+          is_fraud_predicted: res.prediction,
+          nameDest: 'M82736451', // Amazon Merchant placeholder
+          card4: form.card4 ?? 'visa',
+          card6: form.card6 ?? 'debit',
+        });
+      }
+
       return res;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to connect to backend');

@@ -146,7 +146,7 @@ export default function OtpQueue() {
 
         {/* Time */}
         <td style={{ padding: '13px 14px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-          {item.timestamp}
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </td>
 
         {/* Status */}

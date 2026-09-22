@@ -66,6 +66,23 @@ interface StreamContextType {
   handleClearHistory: () => void;
   validateOtp: (txnId: string, inputOtp: string) => boolean;
   abortTransaction: (txnId: string) => void;
+  /**
+   * Called from the Assessment page when a consumer submits a payment risk check.
+   * Injects the result into the stream transactions list tagged with their accountId
+   * so it appears in their personal "My Transaction Activity".
+   */
+  addAssessmentEntry: (accountId: string, result: {
+    txn_id: string;
+    amount: number;
+    type: string;
+    risk_level: string;
+    risk_score: number;
+    fraud_probability: number;
+    is_fraud_predicted: 0 | 1;
+    nameDest: string;
+    card4: string;
+    card6: string;
+  }) => void;
 }
 
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
@@ -225,7 +242,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
       risk_level: riskLevel,
       is_fraud_predicted: isFraud as 0 | 1,
       latency_ms,
-      timestamp: new Date().toLocaleTimeString(),
+      timestamp: new Date().toISOString(),
       otp_code,
       auth_status,
       shap_drivers,
@@ -258,7 +275,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
         account: txn.nameOrig,
         otpCode: txn.otp_code,
         riskLevel: txn.risk_level,
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toISOString(),
       };
       // Keep up to 4 notifications in the visual stack
       setNotifications((prev) => [newNotif, ...prev.filter((n) => n.txnId !== txn.txn_id).slice(0, 3)]);
@@ -321,7 +338,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
         account: txn.nameOrig,
         otpCode: txn.otp_code,
         riskLevel: txn.risk_level,
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toISOString(),
       };
       setNotifications((prev) => [newNotif, ...prev.filter((n) => n.txnId !== txnId).slice(0, 3)]);
     }
@@ -378,6 +395,56 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
     setNotifications((prev) => prev.filter((n) => n.txnId !== txnId));
   };
 
+  // ── Assessment → consumer personal history ────────────────────────────────
+  // When a consumer runs a Payment Risk Scanner check, this injects a synthetic
+  // transaction record tagged with their accountId so it appears in their
+  // "My Transaction Activity". The Org admin already sees it via the backend DB.
+  const addAssessmentEntry = (
+    accountId: string,
+    result: {
+      txn_id: string;
+      amount: number;
+      type: string;
+      risk_level: string;
+      risk_score: number;
+      fraud_probability: number;
+      is_fraud_predicted: 0 | 1;
+      nameDest: string;
+      card4: string;
+      card6: string;
+    }
+  ) => {
+    const profile = CUSTOMER_ACCOUNTS[accountId];
+    const isAuthRequired = result.risk_level === 'MEDIUM' || result.risk_level === 'HIGH';
+    const syntheticTxn: StreamTransaction = {
+      txn_id: result.txn_id,
+      nameOrig: accountId,           // ← tag with consumer's account so their filter picks it up
+      nameDest: result.nameDest || 'M82736451',
+      amount: result.amount,
+      type: result.type || 'PAYMENT',
+      oldbalanceOrg: profile?.balance ?? 0,
+      newbalanceOrig: (profile?.balance ?? 0) - result.amount,
+      oldbalanceDest: 0,
+      newbalanceDest: result.amount,
+      errorBalanceOrig: 0,
+      errorBalanceDest: 0,
+      orig_txn_count_window: 1,
+      orig_amount_sum_window: result.amount,
+      fraud_probability: result.fraud_probability,
+      risk_score: result.risk_score,
+      risk_level: result.risk_level as 'LOW' | 'MEDIUM' | 'HIGH',
+      is_fraud_predicted: result.is_fraud_predicted,
+      latency_ms: 0,
+      timestamp: new Date().toISOString(),
+      otp_code: isAuthRequired ? Math.floor(100000 + Math.random() * 900000).toString() : undefined,
+      auth_status: isAuthRequired ? 'PENDING_2FA' : 'AUTO_APPROVED',
+      shap_drivers: [],
+      card_type: (result.card6 === 'credit' ? 'credit' : 'debit') as 'credit' | 'debit',
+      card_network: (profile?.card_network ?? 'Visa') as 'Visa' | 'Mastercard' | 'Amex' | 'Discover',
+    };
+    setTransactions((prev) => [syntheticTxn, ...prev.slice(0, 49)]);
+  };
+
   const value = useMemo(
     () => ({
       isStreaming,
@@ -402,6 +469,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
       handleClearHistory,
       validateOtp,
       abortTransaction,
+      addAssessmentEntry,
     }),
     [
       isStreaming,

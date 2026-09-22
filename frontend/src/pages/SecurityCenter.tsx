@@ -75,19 +75,20 @@ export default function SecurityCenter() {
       (t) => t.txn_id === activeChallengeTxnId
     );
     if (!activeIsStillPending) {
-      // current active is gone (verified/declined) — move to next pending or clear
+      // current active is gone (verified/declined) — advance to next pending
+      // Note: don't clear authMessage here — the success/decline message is already
+      // scheduled to clear itself via setTimeout in handleVerifyOtp / handleDeclineTxn
       setActiveChallengeTxnId(
         pendingChallenges.length > 0 ? pendingChallenges[0].txn_id : null
       );
       setOtpInput('');
-      setAuthSuccess(null);
-      setAuthMessage(null);
     }
   }, [pendingChallenges, activeChallengeTxnId]);
 
   const activeChallengeTxn: StreamTransaction | undefined = useMemo(() => {
     if (activeChallengeTxnId) return myTransactions.find((t) => t.txn_id === activeChallengeTxnId);
-    return pendingChallenges[0] ?? myTransactions[0];
+    // Only show a pending challenge — never fall back to an arbitrary completed/aborted txn
+    return pendingChallenges[0];
   }, [activeChallengeTxnId, myTransactions, pendingChallenges]);
 
   // Transaction Statement: only show transactions that required OTP verification
@@ -315,7 +316,7 @@ export default function SecurityCenter() {
                   <div>
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>Type & Time</span>
                     <strong style={{ color: 'var(--text-primary)' }}>{activeChallengeTxn.type}</strong>
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 11 }}>{activeChallengeTxn.timestamp}</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 11 }}>{new Date(activeChallengeTxn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
               </div>
@@ -511,7 +512,7 @@ export default function SecurityCenter() {
                       <td style={{ padding: '11px 12px', fontFamily: 'monospace', fontSize: 12, color: item.newbalanceOrig < item.oldbalanceOrg ? '#f59e0b' : '#10b981' }}>
                         ${item.newbalanceOrig.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
-                      <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-muted)' }}>{item.timestamp}</td>
+                      <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-muted)' }}>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                       <td style={{ padding: '11px 12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                         -${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>

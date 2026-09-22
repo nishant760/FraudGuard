@@ -338,7 +338,7 @@ export default function KafkaStream() {
                             )}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                            {txn.nameOrig} ➔ {txn.nameDest} · {txn.timestamp}
+                            {txn.nameOrig} ➔ {txn.nameDest} · {new Date(txn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                           </div>
                         </div>
                       </div>
