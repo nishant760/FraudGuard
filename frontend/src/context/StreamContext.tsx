@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import type { StreamTransaction } from '../types';
 import { triggerRiskDots } from '../lib/dotsEvent';
+import { useAuth } from './AuthContext';
 
 // Customer account pool — each account has a real name, card type, card network and a starting balance
 const CUSTOMER_ACCOUNTS: Record<string, { name: string; card_type: 'credit' | 'debit'; card_network: 'Visa' | 'Mastercard' | 'Amex' | 'Discover'; balance: number }> = {
@@ -88,7 +89,39 @@ interface StreamContextType {
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
 
 export function StreamProvider({ children }: { children: React.ReactNode }) {
-  const [isStreaming, setIsStreaming] = useState<boolean>(true);
+  const { user } = useAuth();
+
+  // Track if an admin has triggered the initial start of the stream
+  const [hasAdminStarted, setHasAdminStarted] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('fraudguard_stream_started') === 'true' || user?.role === 'ORGANISATION';
+    } catch {
+      return user?.role === 'ORGANISATION';
+    }
+  });
+
+  // Stream is idle (false) until an admin logs in for the first time
+  const [isStreaming, setIsStreaming] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('fraudguard_stream_started') === 'true' || user?.role === 'ORGANISATION';
+    } catch {
+      return user?.role === 'ORGANISATION';
+    }
+  });
+
+  // Start the stream when admin (ORGANISATION role) logs in for the first time
+  useEffect(() => {
+    if (user?.role === 'ORGANISATION' && !hasAdminStarted) {
+      setHasAdminStarted(true);
+      setIsStreaming(true);
+      try {
+        sessionStorage.setItem('fraudguard_stream_started', 'true');
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [user, hasAdminStarted]);
+
   const [speedMs, setSpeedMs] = useState<number>(1500);
   const [transactions, setTransactions] = useState<StreamTransaction[]>([]);
   const [selectedTxn, setSelectedTxn] = useState<StreamTransaction | null>(null);
@@ -418,6 +451,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
     const isAuthRequired = result.risk_level === 'MEDIUM' || result.risk_level === 'HIGH';
     const syntheticTxn: StreamTransaction = {
       txn_id: result.txn_id,
+      step: stepRef.current,
       nameOrig: accountId,           // ← tag with consumer's account so their filter picks it up
       nameDest: result.nameDest || 'M82736451',
       amount: result.amount,

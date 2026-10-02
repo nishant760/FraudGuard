@@ -169,7 +169,7 @@ export default function ConsumerTransactions() {
                       </td>
                       <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>{cardLabel}</td>
                       <td style={{ padding: '11px 12px' }}>
-                        <RiskBadge level={t.risk_level} score={t.risk_score} />
+                        <RiskBadge level={t.risk_level} />
                       </td>
                       <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{time}</td>
                       <td style={{ padding: '11px 12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
